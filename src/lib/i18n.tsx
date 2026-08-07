@@ -29,7 +29,7 @@ const dictionaries = {
     "hero.forma.cta": "Смотреть уход",
     "hero.visual.tag": "Одежда",
     "hero.visual.title": "Visual",
-    "hero.visual.line": "Вещи в тихих тонах — деним, бордо, хром.",
+    "hero.visual.line": "Одежда со своим характером.",
     "hero.visual.cta": "Смотреть одежду",
 
     // Home sections
@@ -215,7 +215,7 @@ const dictionaries = {
     "hero.forma.cta": "Shop skincare",
     "hero.visual.tag": "Clothing",
     "hero.visual.title": "Visual",
-    "hero.visual.line": "Pieces in quiet tones — denim, merlot, chrome.",
+    "hero.visual.line": "Clothing with its own character.",
     "hero.visual.cta": "Shop clothing",
 
     "home.manifesto":
