@@ -270,7 +270,6 @@ body {
   .btn-ondark:hover {
     background: var(--oxblood);
     color: var(--text-on-dark);
-    border-color: rgba(241, 239, 234, 0.35);
   }
   .btn-ondark-outline {
     background: transparent;
