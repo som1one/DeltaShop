@@ -44,9 +44,9 @@ const dictionaries = {
       "Комплекс витамина C, транексамовая кислота, пантенол. Увлажняет, выравнивает тон, смягчает.",
     "home.forma.cta": "К уходу",
     "home.visual.label": "Visual · Одежда",
-    "home.visual.title": "Тихая форма",
+    "home.visual.title": "Форма и содержание",
     "home.visual.text":
-      "Стираный деним, глубокое бордо, серебро фурнитуры. Вещи, рассчитанные на годы.",
+      "Архитектурный крой, надежные материалы и сдержанная палитра. Создано, чтобы служить годами.",
     "home.visual.cta": "К одежде",
     "home.partners.label": "Сотрудничество",
     "home.partners.title": "25% с каждой продажи",
@@ -229,9 +229,9 @@ const dictionaries = {
       "Vitamin C complex, tranexamic acid, panthenol. Hydrates, evens tone, softens.",
     "home.forma.cta": "To skincare",
     "home.visual.label": "Visual · Clothing",
-    "home.visual.title": "A quiet form",
+    "home.visual.title": "Form and Substance",
     "home.visual.text":
-      "Washed denim, deep merlot, silver hardware. Pieces made to be worn for years.",
+      "Architectural cuts, durable fabrics, and a restrained palette. Made to last for years.",
     "home.visual.cta": "To clothing",
     "home.partners.label": "Partnership",
     "home.partners.title": "25% of every sale",
