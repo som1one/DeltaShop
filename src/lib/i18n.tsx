@@ -39,9 +39,9 @@ const dictionaries = {
     "home.featured.title": "Витрина сезона",
     "home.featured.all": "Весь каталог",
     "home.forma.label": "Forma · Уход",
-    "home.forma.title": "Формула без лишнего",
+    "home.forma.title": "Чистая эффективность",
     "home.forma.text":
-      "Комплекс витамина C, транексамовая кислота, пантенол. Увлажняет, выравнивает тон, смягчает.",
+      "Глубокий уход, видимый результат и премиальные текстуры. Забота о себе на каждом этапе ежедневного ритуала.",
     "home.forma.cta": "К уходу",
     "home.visual.label": "Visual · Одежда",
     "home.visual.title": "Форма и содержание",
@@ -224,9 +224,9 @@ const dictionaries = {
     "home.featured.title": "This season",
     "home.featured.all": "Full catalogue",
     "home.forma.label": "Forma · Skincare",
-    "home.forma.title": "A formula, nothing extra",
+    "home.forma.title": "Pure Efficiency",
     "home.forma.text":
-      "Vitamin C complex, tranexamic acid, panthenol. Hydrates, evens tone, softens.",
+      "Deep care, visible results, and premium textures. Self-care at every stage of your daily ritual.",
     "home.forma.cta": "To skincare",
     "home.visual.label": "Visual · Clothing",
     "home.visual.title": "Form and Substance",
