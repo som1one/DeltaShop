@@ -186,7 +186,7 @@ const dictionaries = {
     "partners.share": "Ваша доля",
 
     // Footer
-    "footer.tagline": "Уход и одежда в тихих тонах",
+    "footer.tagline": "Два дома — одна концепция ухода и стиля",
     "footer.shop": "Магазин",
     "footer.info": "Информация",
     "footer.about": "О бренде",
@@ -363,7 +363,7 @@ const dictionaries = {
     "partners.stats.earned": "Earned",
     "partners.share": "Your share",
 
-    "footer.tagline": "Skincare and clothing in quiet tones",
+    "footer.tagline": "Two houses — one concept of care and style",
     "footer.shop": "Shop",
     "footer.info": "Information",
     "footer.about": "About",
