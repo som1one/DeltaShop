@@ -1,0 +1,12 @@
+# ── build context ──
+node_modules
+.next
+.git
+.gitignore
+data
+*.md
+.env*
+!.env.example
+.claude
+.vscode
+.idea

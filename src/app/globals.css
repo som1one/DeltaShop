@@ -1,26 +1,386 @@
 @import "tailwindcss";
 
+/* ————————————————————————————————————————————————
+   Self-hosted fonts (files in /public/fonts) — the site must not
+   depend on Google Fonts at build or run time.
+   Display + accent: Prata. Body: Golos Text.
+   ———————————————————————————————————————————————— */
+
+@font-face {
+  font-family: "Prata";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/prata-cyrillic-400-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116, U+20BD;
+}
+@font-face {
+  font-family: "Prata";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/prata-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Golos Text";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/golos-text-cyrillic-400-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116, U+20BD;
+}
+@font-face {
+  font-family: "Golos Text";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/golos-text-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Golos Text";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/golos-text-cyrillic-500-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116, U+20BD;
+}
+@font-face {
+  font-family: "Golos Text";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/golos-text-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+
+/* ————————————————————————————————————————————————
+   FORMA VISUAL — design tokens
+   Light base: warm stone (Aesop-calm), cool undertone.
+   Dark stage: blue-black ink, like the FORMA bottle.
+   Accents: oxblood (longsleeve merlot) + chrome (crescent).
+   ———————————————————————————————————————————————— */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bone: #eae7e0;
+  --porcelain: #f3f1ec;
+  --linen: #d8d4ca;
+
+  --ink: #0e0f12;
+  --graphite: #16181d;
+  --steel: #2a2d35;
+
+  --oxblood: #571c24;
+  --oxblood-bright: #7a2a33;
+
+  --chrome-hi: #eceef1;
+  --chrome-mid: #9ba1ab;
+  --chrome-lo: #d9dce1;
+
+  --text-strong: #141519;
+  --text-muted: #63605a; /* ≥4.5:1 on bone for small labels */
+  --text-on-dark: #f1efea;
+  --text-on-dark-muted: #928f88;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --font-prata: "Prata";
+  --font-golos: "Golos Text";
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bone: var(--bone);
+  --color-porcelain: var(--porcelain);
+  --color-linen: var(--linen);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-steel: var(--steel);
+  --color-oxblood: var(--oxblood);
+  --color-oxblood-bright: var(--oxblood-bright);
+  --color-chrome: var(--chrome-mid);
+  --color-strong: var(--text-strong);
+  --color-muted: var(--text-muted);
+  --color-ondark: var(--text-on-dark);
+  --color-ondark-muted: var(--text-on-dark-muted);
+
+  --font-display: var(--font-prata);
+  --font-body: var(--font-golos);
+  --font-accent: var(--font-prata);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  /* Scrollbars are hidden entirely — Lenis provides the scroll feel */
+  scrollbar-width: none;
+}
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Lenis smooth scroll (per library docs) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bone);
+  color: var(--text-strong);
+  font-family: var(--font-golos), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--oxblood);
+  color: var(--text-on-dark);
+}
+
+/* Visible keyboard focus, quiet mouse focus */
+:focus-visible {
+  outline: 1.5px solid var(--oxblood-bright);
+  outline-offset: 3px;
+}
+.dark-stage :focus-visible {
+  outline-color: var(--chrome-lo);
+}
+/* Fields show focus with their own border — the global outline on top of
+   it reads as a clumsy double stroke (this rule must stay unlayered to
+   beat the unlayered :focus-visible above) */
+.field:focus-visible {
+  outline: none;
+}
+
+@layer components {
+  /* Page gutter */
+  .gutter {
+    padding-inline: clamp(20px, 4.5vw, 64px);
+  }
+  .measure {
+    max-width: 1440px;
+    margin-inline: auto;
+  }
+
+  /* Type roles */
+  .display {
+    font-family: var(--font-prata), serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1.04;
+  }
+  .accent-serif {
+    font-family: var(--font-prata), serif;
+    font-weight: 400;
+  }
+  .label {
+    font-family: var(--font-golos), sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+  }
+  .label-muted {
+    color: var(--text-muted);
+  }
+  .dark-stage .label-muted {
+    color: var(--text-on-dark-muted);
+  }
+
+  /* Chrome text — for the crescent moments only */
+  .text-chrome {
+    background: linear-gradient(
+      165deg,
+      var(--chrome-hi) 10%,
+      var(--chrome-mid) 48%,
+      var(--chrome-lo) 90%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Dark cinematic stage */
+  .dark-stage {
+    background: var(--ink);
+    color: var(--text-on-dark);
+  }
+
+  /* Buttons — square, quiet, one shine sweep on the primary */
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 17px 34px;
+    font-family: var(--font-golos), sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border: 1px solid transparent;
+    border-radius: 1px;
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+      background-color 0.35s var(--ease-out-soft),
+      border-color 0.35s var(--ease-out-soft),
+      color 0.35s var(--ease-out-soft);
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--text-on-dark);
+  }
+  .btn-primary:hover {
+    background: var(--oxblood);
+  }
+  .btn-onlight-outline {
+    background: transparent;
+    color: var(--text-strong);
+    border-color: rgba(20, 21, 25, 0.35);
+  }
+  .btn-onlight-outline:hover {
+    border-color: var(--text-strong);
+    background: rgba(20, 21, 25, 0.04);
+  }
+  .btn-ondark {
+    background: var(--porcelain);
+    color: var(--text-strong);
+  }
+  /* Hover fills with the house oxblood; the light hairline keeps the
+     button legible when it sits on the oxblood partners band */
+  .btn-ondark:hover {
+    background: var(--oxblood);
+    color: var(--text-on-dark);
+    border-color: rgba(241, 239, 234, 0.35);
+  }
+  .btn-ondark-outline {
+    background: transparent;
+    color: var(--text-on-dark);
+    border-color: rgba(241, 239, 234, 0.32);
+  }
+  .btn-ondark-outline:hover {
+    border-color: var(--text-on-dark);
+    background: rgba(241, 239, 234, 0.06);
+  }
+
+  /* Hairlines */
+  .hairline {
+    border-color: var(--linen);
+  }
+  .dark-stage .hairline {
+    border-color: var(--steel);
+  }
+
+  /* Quiet underline links */
+  .link-quiet {
+    position: relative;
+    transition: opacity 0.3s var(--ease-out-soft);
+  }
+  /* Single transform-origin: swapping origins mid-transition makes the
+     line jump when the cursor sweeps quickly across links */
+  .link-quiet::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.45s var(--ease-out-soft);
+  }
+  .link-quiet:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Inputs — min-width 0 so grid/flex tracks can shrink below the
+     input's intrinsic size on narrow screens */
+  .field {
+    width: 100%;
+    min-width: 0;
+    padding: 15px 18px;
+    background: transparent;
+    border: 1px solid rgba(20, 21, 25, 0.28);
+    border-radius: 1px;
+    font-size: 14px;
+    color: var(--text-strong);
+    transition: border-color 0.3s var(--ease-out-soft);
+  }
+  .field::placeholder {
+    color: var(--text-muted);
+  }
+  .field:hover {
+    border-color: rgba(20, 21, 25, 0.5);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--text-strong);
+  }
+  .dark-stage .field {
+    border-color: rgba(241, 239, 234, 0.28);
+    color: var(--text-on-dark);
+  }
+  .dark-stage .field::placeholder {
+    color: var(--text-on-dark-muted);
+  }
+  .dark-stage .field:hover {
+    border-color: rgba(241, 239, 234, 0.5);
+  }
+  .dark-stage .field:focus {
+    border-color: var(--text-on-dark);
+  }
+
+  /* Invalid field + inline error message (after the :hover/:focus rules so
+     the red border wins while the error is present) */
+  .field.field-invalid {
+    border-color: var(--oxblood-bright);
+  }
+  .field-error {
+    margin-top: 7px;
+    font-size: 12px;
+    color: var(--oxblood-bright);
+  }
+}
+
+/* Film grain for cinematic dark stages — pure CSS, no asset */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
