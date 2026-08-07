@@ -98,7 +98,7 @@ export default function Home() {
       </section>
 
       {/* 5 — Thin utility strip: delivery, returns, payment */}
-      <section className="gutter border-b hairline py-5 md:py-6">
+      <section className="gutter border-b hairline py-2.5 md:py-5">
         <Reveal className="measure">
           <p className="label label-muted text-center leading-relaxed">
             {t("home.note")}

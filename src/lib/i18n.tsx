@@ -53,8 +53,7 @@ const dictionaries = {
     "home.partners.text":
       "Личная ссылка создаётся сама. Делитесь ею — и четверть каждой оплаты остаётся вам.",
     "home.partners.cta": "Стать партнёром",
-    "home.note":
-      "Доставка по СНГ и миру · Возврат в течение 14 дней · Оплата картой или по СБП",
+    "home.note": "Доставка по СНГ и миру · Возврат в течение 14 дней",
 
     // Catalog
     "catalog.visual.title": "Visual",
@@ -238,8 +237,7 @@ const dictionaries = {
     "home.partners.text":
       "Your personal link creates itself. Share it — and a quarter of every payment stays with you.",
     "home.partners.cta": "Become a partner",
-    "home.note":
-      "Shipping across CIS and worldwide · 14-day returns · Card or SBP payment",
+    "home.note": "Shipping across CIS and worldwide · 14-day returns",
 
     "catalog.visual.title": "Visual",
     "catalog.visual.sub": "Clothing & accessories",
