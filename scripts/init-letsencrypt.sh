@@ -11,14 +11,18 @@
 # вы принимаете условия Let's Encrypt (https://letsencrypt.org/repository/).
 set -eu
 
-# .env читает docker compose, но не оболочка — подхватим сами
-if [ -f .env ]; then
-  . ./.env
-fi
+# .env читает docker compose, но не оболочка — вытащим только нужные ключи.
+# Именно вытащим, а не `. ./.env`: пароли со спецсимволами при сорсинге
+# либо ломают скрипт, либо выполняются как код.
+env_value() {
+  [ -f .env ] || return 0
+  sed -n "s/^$1=//p" .env | tail -1 | sed 's/^"\(.*\)"$/\1/; s/^'\''\(.*\)'\''$/\1/'
+}
 
+DOMAIN="${DOMAIN:-$(env_value DOMAIN)}"
 DOMAIN="${DOMAIN:-forma-visual.com}"
 WWW="www.$DOMAIN"
-EMAIL="${CERTBOT_EMAIL:-}"
+EMAIL="${CERTBOT_EMAIL:-$(env_value CERTBOT_EMAIL)}"
 STAGING="${STAGING:-0}"   # STAGING=1 — тестовый CA Let's Encrypt, без лимитов
 
 if [ -z "$EMAIL" ]; then
