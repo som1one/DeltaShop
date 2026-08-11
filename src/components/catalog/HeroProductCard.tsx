@@ -14,7 +14,7 @@ import type { Product } from "@/lib/products";
 export default function HeroProductCard({
   product,
   priority = false,
-  sizes = "(max-width: 640px) 96vw, (max-width: 1024px) 46vw, 64vw",
+  sizes = "(max-width: 640px) 96vw, (max-width: 1024px) 92vw, 60vw",
 }: {
   product: Product;
   priority?: boolean;

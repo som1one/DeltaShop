@@ -11,7 +11,6 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 type PanelId = "forma" | "visual";
 
-const serum = getProduct("forma-serum")!;
 const longsleeve = getProduct("longsleeve-crescent")!;
 
 const rise = (reduce: boolean, delay: number): Variants =>
@@ -159,8 +158,11 @@ export default function HeroDiptych() {
             sizes="100vw"
             className="object-cover object-[60%_center] opacity-60 md:hidden"
           />
+          {/* Atmosphere, not product: the cinematic bottle-on-concrete frame
+              lives on its own so the catalogue shot can be a studio cutout
+              without washing this panel out under the ink scrims. */}
           <Image
-            src={serum.image}
+            src="/products/forma-serum-hero.png"
             alt=""
             fill
             priority

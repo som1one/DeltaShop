@@ -62,10 +62,7 @@ export default function Home() {
           <RevealGroup className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 md:mt-16 lg:grid-cols-3">
             {lead ? (
               <RevealItem key={lead.id} className="sm:col-span-2">
-                <HeroProductCard
-                  product={lead}
-                  sizes="(max-width: 640px) 96vw, (max-width: 1024px) 92vw, 60vw"
-                />
+                <HeroProductCard product={lead} />
               </RevealItem>
             ) : null}
             {rest.map((p) => (
@@ -81,13 +78,18 @@ export default function Home() {
       <section className="dark-stage grain relative">
         <div className="measure gutter grid items-center gap-14 py-24 md:grid-cols-2 md:gap-24 md:py-36">
           <Reveal>
-            <ParallaxFrame className="border hairline">
+            {/* Studio cutout on porcelain — a light frame inside the dark
+                band, mirroring how the VISUAL band carries the cap */}
+            <ParallaxFrame
+              className="border hairline bg-porcelain"
+              layerClassName="bg-porcelain"
+            >
               <Image
                 src={serum.image}
                 alt={serum.name[lang]}
                 fill
                 sizes="(max-width: 767px) 92vw, 44vw"
-                className="object-cover"
+                className="object-contain p-[9%] mix-blend-multiply"
               />
             </ParallaxFrame>
           </Reveal>

@@ -117,6 +117,30 @@ export const products: Product[] = [
     imageStyle: "cutout",
   },
   {
+    id: "jacket-trackside",
+    house: "visual",
+    name: { ru: "Куртка Trackside", en: "Trackside Jacket" },
+    tagline: {
+      ru: "Чёрная олимпийка на молнии",
+      en: "Black full-zip track jacket",
+    },
+    description: {
+      ru: "Олимпийка на молнии во всю длину: стойка, вязаные манжеты и низ, два кармана в рельефах. Плотный трикотаж держит форму, светлая отстрочка по плечам собирает силуэт. Одинаково ложится поверх лонгслива и на футболку.",
+      en: "A full-zip track jacket: stand collar, ribbed cuffs and hem, two seam pockets. Dense knit that holds its shape, pale piping along the shoulders drawing the silhouette. Sits equally well over a longsleeve or straight on a tee.",
+    },
+    composition: {
+      ru: "100% полиэстер. Стирать при 30°, принты не гладить, сушить на воздухе.",
+      en: "100% polyester. Wash at 30°, do not iron the prints, air dry.",
+    },
+    priceRub: 12400,
+    priceUsd: 134,
+    image: "/products/jacket-trackside.png",
+    sizes: ["XS", "S", "M", "L", "XL"],
+    video: null,
+    featured: false,
+    imageStyle: "cutout",
+  },
+  {
     id: "forma-serum",
     house: "forma",
     name: { ru: "Сыворотка Visage 01", en: "Visage Serum 01" },
@@ -138,7 +162,7 @@ export const products: Product[] = [
     sizes: ["30 ml"],
     video: null,
     featured: true,
-    imageStyle: "cover",
+    imageStyle: "cutout",
   },
 ];
 

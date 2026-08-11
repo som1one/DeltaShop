@@ -21,7 +21,7 @@ export default function VisualCataloguePage() {
         />
         <RevealGroup className="mt-14 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 md:mt-20 lg:grid-cols-3">
           {hero ? (
-            <RevealItem key={hero.id} className="lg:col-span-2">
+            <RevealItem key={hero.id} className="sm:col-span-2">
               <HeroProductCard product={hero} priority />
             </RevealItem>
           ) : null}
