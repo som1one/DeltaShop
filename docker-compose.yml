@@ -27,6 +27,9 @@ services:
       ROBOKASSA_PASSWORD2: ${ROBOKASSA_PASSWORD2:-}
       ROBOKASSA_TEST: ${ROBOKASSA_TEST:-1}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    # Фото, загруженные из админки, живут вне образа и переживают пересборку
+    volumes:
+      - uploads:/app/uploads
 
   nginx:
     image: nginx:alpine
@@ -59,5 +62,6 @@ services:
 
 volumes:
   pgdata:
+  uploads:
   certbot_conf:
   certbot_www:

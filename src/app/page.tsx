@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useLang } from "@/lib/i18n";
-import { featured, getProduct } from "@/lib/products";
+import { leadSpan } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 import ProductCard from "@/components/ProductCard";
 import Reveal, { RevealGroup, RevealItem } from "@/components/Reveal";
 import HeroProductCard from "@/components/catalog/HeroProductCard";
@@ -11,14 +12,15 @@ import HeroDiptych from "@/components/home/HeroDiptych";
 import HeroTypographic from "@/components/home/HeroTypographic";
 import ParallaxFrame from "@/components/home/ParallaxFrame";
 
-const serum = getProduct("forma-serum")!;
-const cap = getProduct("cap-drape")!;
-
 export default function Home() {
   const { lang, t } = useLang();
-  /* Five featured pieces: the lead runs two columns wide, so both the
-     two- and three-column grids close without an orphan row. */
+  const { get, featured } = useProducts();
+  /* Both bands lean on a specific piece; a catalogue edited from the admin
+     can drop either, so the section simply stands down when it is gone. */
+  const serum = get("forma-serum");
+  const cap = get("cap-drape");
   const [lead, ...rest] = featured();
+  const span = leadSpan(rest.length);
 
   /* The "25%" moment: lift the number out of the title so it can go huge */
   const partnersTitle = t("home.partners.title");
@@ -61,8 +63,13 @@ export default function Home() {
           </Reveal>
           <RevealGroup className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 md:mt-16 lg:grid-cols-3">
             {lead ? (
-              <RevealItem key={lead.id} className="sm:col-span-2">
-                <HeroProductCard product={lead} />
+              <RevealItem
+                key={lead.id}
+                className={`${span.sm ? "sm:col-span-2" : ""} ${
+                  span.lg ? "lg:col-span-2" : "lg:col-span-1"
+                }`}
+              >
+                <HeroProductCard product={lead} wide={span.lg} />
               </RevealItem>
             ) : null}
             {rest.map((p) => (
@@ -76,23 +83,29 @@ export default function Home() {
 
       {/* 4 — FORMA band */}
       <section className="dark-stage grain relative">
-        <div className="measure gutter grid items-center gap-14 py-24 md:grid-cols-2 md:gap-24 md:py-36">
-          <Reveal>
-            {/* Studio cutout on porcelain — a light frame inside the dark
-                band, mirroring how the VISUAL band carries the cap */}
-            <ParallaxFrame
-              className="border hairline bg-porcelain"
-              layerClassName="bg-porcelain"
-            >
-              <Image
-                src={serum.image}
-                alt={serum.name[lang]}
-                fill
-                sizes="(max-width: 767px) 92vw, 44vw"
-                className="object-contain p-[9%] mix-blend-multiply"
-              />
-            </ParallaxFrame>
-          </Reveal>
+        <div
+          className={`measure gutter grid items-center gap-14 py-24 md:gap-24 md:py-36 ${
+            serum ? "md:grid-cols-2" : ""
+          }`}
+        >
+          {serum && (
+            <Reveal>
+              {/* Studio cutout on porcelain — a light frame inside the dark
+                  band, mirroring how the VISUAL band carries the cap */}
+              <ParallaxFrame
+                className="border hairline bg-porcelain"
+                layerClassName="bg-porcelain"
+              >
+                <Image
+                  src={serum.image}
+                  alt={serum.name[lang]}
+                  fill
+                  sizes="(max-width: 767px) 92vw, 44vw"
+                  className="object-contain p-[9%] mix-blend-multiply"
+                />
+              </ParallaxFrame>
+            </Reveal>
+          )}
           <Reveal delay={0.12}>
             <p className="label label-muted">{t("home.forma.label")}</p>
             <h2 className="display mt-5 text-3xl md:text-5xl">
@@ -121,21 +134,27 @@ export default function Home() {
 
       {/* 6 — VISUAL band, mirrored */}
       <section>
-        <div className="measure gutter grid items-center gap-14 py-24 md:grid-cols-2 md:gap-24 md:py-36">
-          <Reveal className="md:order-2">
-            <ParallaxFrame
-              className="border hairline bg-porcelain"
-              layerClassName="bg-porcelain"
-            >
-              <Image
-                src={cap.image}
-                alt={cap.name[lang]}
-                fill
-                sizes="(max-width: 767px) 92vw, 44vw"
-                className="object-contain p-[9%] mix-blend-multiply"
-              />
-            </ParallaxFrame>
-          </Reveal>
+        <div
+          className={`measure gutter grid items-center gap-14 py-24 md:gap-24 md:py-36 ${
+            cap ? "md:grid-cols-2" : ""
+          }`}
+        >
+          {cap && (
+            <Reveal className="md:order-2">
+              <ParallaxFrame
+                className="border hairline bg-porcelain"
+                layerClassName="bg-porcelain"
+              >
+                <Image
+                  src={cap.image}
+                  alt={cap.name[lang]}
+                  fill
+                  sizes="(max-width: 767px) 92vw, 44vw"
+                  className="object-contain p-[9%] mix-blend-multiply"
+                />
+              </ParallaxFrame>
+            </Reveal>
+          )}
           <Reveal delay={0.12} className="md:order-1">
             <p className="label label-muted">{t("home.visual.label")}</p>
             <h2 className="display mt-5 text-3xl md:text-5xl">

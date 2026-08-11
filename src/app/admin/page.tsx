@@ -1,105 +1,86 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { adminFetch, AdminError } from "@/lib/admin-client";
+import OrdersSection from "@/components/admin/OrdersSection";
+import PartnersSection from "@/components/admin/PartnersSection";
+import ProductsSection from "@/components/admin/ProductsSection";
 
-type OrderStatus = "new" | "paid" | "shipped" | "delivered" | "cancelled";
+type Tab = "products" | "orders" | "partners";
 
-type AdminOrder = {
-  invId: number;
-  token: string;
-  status: OrderStatus;
-  name: string;
-  email: string;
-  phone: string;
-  region: "cis" | "intl";
-  city: string;
-  address: string;
-  totalRub: number;
-  items: { productId: string; size: string | null; qty: number }[];
-  track: string | null;
-  createdAt: string;
-};
+const TABS: { id: Tab; label: string }[] = [
+  { id: "products", label: "Товары" },
+  { id: "orders", label: "Заказы" },
+  { id: "partners", label: "Партнёры" },
+];
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  new: "Принят",
-  paid: "Оплачен",
-  shipped: "Отправлен",
-  delivered: "Доставлен",
-  cancelled: "Отменён",
-};
+const STORAGE_KEY = "fv-admin-key";
 
-/** Мини-админка заказов. Ключ — ADMIN_PASSWORD из .env.local. */
+/**
+ * Кабинет: товары, заказы, заявки партнёров.
+ * Вход — тот же ключ ADMIN_PASSWORD в заголовке X-Admin-Key; ключ живёт
+ * в sessionStorage и уходит при закрытии вкладки.
+ */
 export default function AdminPage() {
-  const [key, setKey] = useState("");
+  const [key, setKey] = useState<string | null>(null);
   const [draftKey, setDraftKey] = useState("");
-  const [orders, setOrders] = useState<AdminOrder[] | null>(null);
+  const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<number | null>(null);
+  const [tab, setTab] = useState<Tab>("products");
 
+  /* Проверяем сохранённый ключ до отрисовки разделов, иначе каждый из них
+     стартует с собственной ошибки «неверный ключ». */
   useEffect(() => {
-    const saved = window.sessionStorage.getItem("fv-admin-key");
-    if (saved) setKey(saved);
-  }, []);
-
-  useEffect(() => {
-    if (!key) return;
     let alive = true;
-    fetch("/api/admin/orders", { headers: { "x-admin-key": key } })
-      .then(async (res) => {
-        if (!alive) return;
-        if (!res.ok) {
-          setError(
-            res.status === 503
-              ? "ADMIN_PASSWORD не задан в .env.local"
-              : "Неверный ключ",
-          );
-          setOrders(null);
-          return;
-        }
-        setError(null);
-        window.sessionStorage.setItem("fv-admin-key", key);
-        const data = (await res.json()) as { orders: AdminOrder[] };
-        setOrders(data.orders);
+    const saved = window.sessionStorage.getItem(STORAGE_KEY);
+    const verify = saved
+      ? adminFetch(saved, "/api/admin/session").then(() => saved)
+      : Promise.resolve(null);
+    verify
+      .then((valid) => {
+        if (alive && valid) setKey(valid);
       })
-      .catch(() => alive && setError("Сервер недоступен"));
+      .catch(() => window.sessionStorage.removeItem(STORAGE_KEY))
+      .finally(() => {
+        if (alive) setChecking(false);
+      });
     return () => {
       alive = false;
     };
-  }, [key]);
+  }, []);
 
-  const login = (e: FormEvent) => {
+  const login = async (e: FormEvent) => {
     e.preventDefault();
-    setKey(draftKey.trim());
-  };
-
-  const update = async (
-    invId: number,
-    patch: { status?: OrderStatus; track?: string | null },
-  ) => {
-    setSavingId(invId);
+    const candidate = draftKey.trim();
+    if (!candidate) return;
+    setError(null);
     try {
-      const res = await fetch("/api/admin/orders", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-key": key },
-        body: JSON.stringify({ invId, ...patch }),
-      });
-      if (res.ok) {
-        const { order } = (await res.json()) as { order: AdminOrder };
-        setOrders((prev) =>
-          prev
-            ? prev.map((o) => (o.invId === order.invId ? { ...o, ...order } : o))
-            : prev,
-        );
-      }
-    } finally {
-      setSavingId(null);
+      await adminFetch(candidate, "/api/admin/session");
+      window.sessionStorage.setItem(STORAGE_KEY, candidate);
+      setKey(candidate);
+      setDraftKey("");
+    } catch (e) {
+      setError(e instanceof AdminError ? e.message : "Не удалось войти");
     }
   };
 
-  if (!orders) {
+  const logout = () => {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+    setKey(null);
+  };
+
+  if (checking) {
     return (
       <section className="measure gutter pb-24 pt-28 md:pt-40">
-        <h1 className="display text-3xl md:text-5xl">Админка</h1>
+        <p className="label label-muted">Проверяем доступ…</p>
+      </section>
+    );
+  }
+
+  if (!key) {
+    return (
+      <section className="measure gutter pb-24 pt-28 md:pt-40">
+        <h1 className="display text-3xl md:text-5xl">Кабинет</h1>
         <form onSubmit={login} className="mt-10 flex max-w-md gap-3">
           <input
             className="field"
@@ -108,12 +89,17 @@ export default function AdminPage() {
             onChange={(e) => setDraftKey(e.target.value)}
             placeholder="Ключ администратора"
             aria-label="Ключ администратора"
+            autoComplete="current-password"
           />
           <button type="submit" className="btn btn-primary shrink-0">
             Войти
           </button>
         </form>
-        {error && <p className="field-error">{error}</p>}
+        {error && (
+          <p className="field-error" role="alert">
+            {error}
+          </p>
+        )}
       </section>
     );
   }
@@ -121,94 +107,35 @@ export default function AdminPage() {
   return (
     <section className="measure gutter pb-24 pt-28 md:pt-40">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="display text-3xl md:text-5xl">Заказы</h1>
-        <span className="label label-muted">{orders.length} шт.</span>
+        <h1 className="display text-3xl md:text-5xl">Кабинет</h1>
+        <button type="button" className="label link-quiet" onClick={logout}>
+          Выйти
+        </button>
       </div>
 
-      {orders.length === 0 ? (
-        <p className="mt-10 text-muted">Заказов пока нет.</p>
-      ) : (
-        <ul className="mt-10 border-t hairline">
-          {orders.map((order) => (
-            <li
-              key={order.invId}
-              className="grid gap-4 border-b hairline py-6 lg:grid-cols-[110px_1fr_260px_240px] lg:gap-8"
-            >
-              <div>
-                <p className="display text-lg tabular-nums">№{order.invId}</p>
-                <p className="mt-1 text-xs tabular-nums text-muted">
-                  {new Date(order.createdAt).toLocaleString("ru-RU", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-                <p className="mt-1 text-sm tabular-nums">
-                  {order.totalRub.toLocaleString("ru-RU")} ₽
-                </p>
-              </div>
-              <div className="min-w-0 text-sm">
-                <p className="truncate">
-                  {order.name} · {order.email} · {order.phone}
-                </p>
-                <p className="mt-1 truncate text-muted">
-                  {order.region === "cis" ? "СНГ" : "Международный"} ·{" "}
-                  {order.city}, {order.address}
-                </p>
-                <p className="mt-1 truncate text-xs text-muted">
-                  {order.items
-                    .map((i) => `${i.productId}${i.size ? ` (${i.size})` : ""} ×${i.qty}`)
-                    .join(", ")}
-                </p>
-              </div>
-              <div>
-                <label className="label label-muted" htmlFor={`st-${order.invId}`}>
-                  Статус
-                </label>
-                <select
-                  id={`st-${order.invId}`}
-                  className="field mt-2"
-                  value={order.status}
-                  disabled={savingId === order.invId}
-                  onChange={(e) =>
-                    update(order.invId, {
-                      status: e.target.value as OrderStatus,
-                    })
-                  }
-                >
-                  {(Object.keys(STATUS_LABEL) as OrderStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABEL[s]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  className="label label-muted"
-                  htmlFor={`tr-${order.invId}`}
-                >
-                  Трек СДЭК
-                </label>
-                <input
-                  id={`tr-${order.invId}`}
-                  className="field mt-2"
-                  defaultValue={order.track ?? ""}
-                  placeholder="Номер отправления"
-                  disabled={savingId === order.invId}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v !== (order.track ?? "")) {
-                      update(order.invId, { track: v === "" ? null : v });
-                    }
-                  }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <nav className="mt-10 flex gap-6 border-b hairline" aria-label="Разделы">
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setTab(item.id)}
+            aria-current={tab === item.id ? "page" : undefined}
+            className={`label -mb-px border-b-2 pb-3 transition-colors ${
+              tab === item.id
+                ? "border-(--ink) text-strong"
+                : "border-transparent text-muted hover:text-strong"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="mt-10">
+        {tab === "products" && <ProductsSection adminKey={key} />}
+        {tab === "orders" && <OrdersSection adminKey={key} />}
+        {tab === "partners" && <PartnersSection adminKey={key} />}
+      </div>
     </section>
   );
 }

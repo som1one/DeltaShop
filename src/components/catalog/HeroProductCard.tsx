@@ -14,14 +14,22 @@ import type { Product } from "@/lib/products";
 export default function HeroProductCard({
   product,
   priority = false,
-  sizes = "(max-width: 640px) 96vw, (max-width: 1024px) 92vw, 60vw",
+  wide = true,
+  sizes,
 }: {
   product: Product;
   priority?: boolean;
-  /** Must match how many columns the card spans at each breakpoint. */
+  /** Opens to 7/5 on lg — only true while the card really spans two columns. */
+  wide?: boolean;
+  /** Overrides the default, which follows `wide`. */
   sizes?: string;
 }) {
   const { lang, t } = useLang();
+  const measured =
+    sizes ??
+    (wide
+      ? "(max-width: 640px) 96vw, (max-width: 1024px) 92vw, 60vw"
+      : "(max-width: 640px) 96vw, (max-width: 1024px) 92vw, 31vw");
 
   return (
     <Link
@@ -29,7 +37,11 @@ export default function HeroProductCard({
       className="group block"
       aria-label={product.name[lang]}
     >
-      <div className="bg-porcelain hairline relative aspect-[4/5] overflow-hidden border transition-colors duration-500 group-hover:border-(--text-muted) lg:aspect-[7/5]">
+      <div
+        className={`bg-porcelain hairline relative aspect-[4/5] overflow-hidden border transition-colors duration-500 group-hover:border-(--text-muted) ${
+          wide ? "lg:aspect-[7/5]" : ""
+        }`}
+      >
         {/* Oversized layer resting downscaled — hover eases to 1:1; crisp
             at every phase, compositor-smooth (see ProductCard) */}
         <div className="absolute -inset-[2%] scale-[.962] bg-porcelain transition-transform duration-700 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] group-hover:scale-100">
@@ -37,7 +49,7 @@ export default function HeroProductCard({
             src={product.image}
             alt={product.name[lang]}
             fill
-            sizes={sizes}
+            sizes={measured}
             priority={priority}
             className="object-contain p-[8%] mix-blend-multiply"
           />

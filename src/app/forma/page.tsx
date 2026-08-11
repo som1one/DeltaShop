@@ -5,11 +5,14 @@ import { RevealGroup, RevealItem } from "@/components/Reveal";
 import CatalogHeader from "@/components/catalog/CatalogHeader";
 import ComingSoonCard from "@/components/catalog/ComingSoonCard";
 import HeroProductCard from "@/components/catalog/HeroProductCard";
-import { byHouse, comingSoon } from "@/lib/products";
+import { comingSoon, leadSpan } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 
 export default function FormaCataloguePage() {
-  const items = byHouse("forma");
+  const items = useProducts().byHouse("forma");
   const [hero, ...rest] = items;
+  /* Плитки «Скоро» стоят в том же ряду, поэтому считаются вместе с товарами */
+  const span = leadSpan(rest.length + comingSoon.length);
 
   return (
     <div className="pt-28 md:pt-40">
@@ -22,8 +25,13 @@ export default function FormaCataloguePage() {
         />
         <RevealGroup className="mt-14 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 md:mt-20 lg:grid-cols-3">
           {hero ? (
-            <RevealItem key={hero.id} className="sm:col-span-2">
-              <HeroProductCard product={hero} priority />
+            <RevealItem
+              key={hero.id}
+              className={`${span.sm ? "sm:col-span-2" : ""} ${
+                span.lg ? "lg:col-span-2" : "lg:col-span-1"
+              }`}
+            >
+              <HeroProductCard product={hero} priority wide={span.lg} />
             </RevealItem>
           ) : null}
           {rest.map((product, i) => (

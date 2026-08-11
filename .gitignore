@@ -44,3 +44,6 @@ next-env.d.ts
 
 # заказы (SQLite)
 /data
+
+# фото, загруженные из админки (в проде — том docker)
+/uploads

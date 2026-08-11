@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { formatPrice, useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
-import { getProduct } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 import Reveal from "@/components/Reveal";
 import EmptyCart from "@/components/checkout/EmptyCart";
 import OptionCard from "@/components/checkout/OptionCard";
@@ -20,6 +20,8 @@ const FORM_ID = "checkout-form";
 
 export default function CheckoutPage() {
   const { lang, t } = useLang();
+
+  const { get } = useProducts();
   const cart = useCart();
   const reduce = useReducedMotion();
 
@@ -369,7 +371,7 @@ export default function CheckoutPage() {
                   <h2 className="label">{t("checkout.summary")}</h2>
                   <ul className="mt-6 divide-y divide-linen border-y hairline">
                     {cart.lines.map((line) => {
-                      const p = getProduct(line.productId);
+                      const p = get(line.productId);
                       if (!p) return null;
                       const cutout = p.imageStyle === "cutout";
                       return (

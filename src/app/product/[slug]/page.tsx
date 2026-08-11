@@ -5,7 +5,8 @@ import { notFound, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatPrice, useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
-import { byHouse, getProduct, products, type Product } from "@/lib/products";
+import type { Product } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 import ProductCard from "@/components/ProductCard";
 import Reveal, { RevealGroup, RevealItem } from "@/components/Reveal";
 import Accordion from "@/components/catalog/Accordion";
@@ -14,7 +15,7 @@ import MediaStage from "@/components/catalog/MediaStage";
 export default function ProductPage() {
   const params = useParams<{ slug: string }>();
   const slug = typeof params?.slug === "string" ? params.slug : "";
-  const product = getProduct(slug);
+  const product = useProducts().get(slug);
   if (!product) notFound();
 
   /* Keyed by id so size/added state resets when navigating between products */
@@ -23,6 +24,7 @@ export default function ProductPage() {
 
 function ProductView({ product }: { product: Product }) {
   const { lang, t } = useLang();
+  const catalogue = useProducts();
   const cart = useCart();
   const [size, setSize] = useState<string | null>(
     product.sizes ? product.sizes[0] : null,
@@ -46,8 +48,8 @@ function ProductView({ product }: { product: Product }) {
 
   const houseHref = product.house === "forma" ? "/forma" : "/visual";
   const also = [
-    ...byHouse(product.house).filter((p) => p.id !== product.id),
-    ...products.filter((p) => p.house !== product.house),
+    ...catalogue.byHouse(product.house).filter((p) => p.id !== product.id),
+    ...catalogue.all.filter((p) => p.house !== product.house),
   ].slice(0, 3);
 
   return (

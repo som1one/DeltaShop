@@ -5,13 +5,12 @@ import Link from "next/link";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { useLang } from "@/lib/i18n";
-import { getProduct } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 type PanelId = "forma" | "visual";
 
-const longsleeve = getProduct("longsleeve-crescent")!;
 
 const rise = (reduce: boolean, delay: number): Variants =>
   reduce
@@ -112,6 +111,9 @@ export default function HeroDiptych() {
   const { t } = useLang();
   const reduce = useReducedMotion() ?? false;
   const [hovered, setHovered] = useState<PanelId | null>(null);
+  /* The VISUAL panel leans on the signature longsleeve; if the catalogue
+     no longer carries it, the panel keeps its typography and drops the shot */
+  const longsleeve = useProducts().get("longsleeve-crescent");
 
   const basis = (panel: PanelId) =>
     hovered === null ? "50%" : hovered === panel ? "56%" : "44%";
@@ -235,16 +237,18 @@ export default function HeroDiptych() {
         onBlur={() => setHovered(null)}
       >
         <div className="relative min-h-0 flex-1">
-          <div className="absolute inset-x-[8%] bottom-[2%] top-9 hidden [@media(min-height:730px)]:block md:block md:bottom-[4%] md:top-[16%]">
-            <Image
-              src={longsleeve.image}
-              alt=""
-              fill
-              priority
-              sizes="(max-width: 767px) 88vw, 50vw"
-              className="object-contain mix-blend-multiply"
-            />
-          </div>
+          {longsleeve && (
+            <div className="absolute inset-x-[8%] bottom-[2%] top-9 hidden [@media(min-height:730px)]:block md:block md:bottom-[4%] md:top-[16%]">
+              <Image
+                src={longsleeve.image}
+                alt=""
+                fill
+                priority
+                sizes="(max-width: 767px) 88vw, 50vw"
+                className="object-contain mix-blend-multiply"
+              />
+            </div>
+          )}
         </div>
         <TextStack
           eyebrow={t("hero.visual.tag")}

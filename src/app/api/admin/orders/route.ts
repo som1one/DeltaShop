@@ -5,7 +5,16 @@ import { adminList, adminUpdate, type OrderStatus } from "@/lib/orders";
 export async function GET(request: Request) {
   const denied = checkAdminKey(request);
   if (denied) return denied;
-  return NextResponse.json({ orders: await adminList() });
+  const params = new URL(request.url).searchParams;
+  const status = params.get("status") ?? "all";
+  return NextResponse.json({
+    orders: await adminList({
+      search: params.get("search") ?? undefined,
+      status: STATUSES.includes(status as OrderStatus)
+        ? (status as OrderStatus)
+        : "all",
+    }),
+  });
 }
 
 const STATUSES: OrderStatus[] = [

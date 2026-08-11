@@ -8,8 +8,8 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
  * Partner application: name + email in, "application sent" out.
- * The real flow (review and approve in the admin cabinet, link by email)
- * arrives with the phase-2 backend.
+ * The application lands in the admin cabinet for review; the personal link
+ * is issued there on approval.
  */
 export default function LinkGenerator() {
   const { t } = useLang();
@@ -17,9 +17,11 @@ export default function LinkGenerator() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const next: { name?: string; email?: string } = {};
     if (!name.trim()) next.name = t("form.required");
@@ -27,7 +29,22 @@ export default function LinkGenerator() {
     else if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = t("form.email");
     setErrors(next);
     if (next.name || next.email) return;
-    setSent(true);
+
+    setSending(true);
+    setFailed(false);
+    try {
+      const res = await fetch("/api/partners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+      });
+      if (!res.ok) throw new Error("rejected");
+      setSent(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
   };
 
   const swap = reduce
@@ -100,9 +117,15 @@ export default function LinkGenerator() {
             <button
               type="submit"
               className="btn btn-primary mt-8 w-full md:w-auto"
+              disabled={sending}
             >
-              {t("partners.form.cta")}
+              {sending ? t("partners.form.sending") : t("partners.form.cta")}
             </button>
+            {failed && (
+              <p className="field-error mt-4" role="alert">
+                {t("partners.form.failed")}
+              </p>
+            )}
           </motion.form>
         ) : (
           <motion.div key="sent" {...swap} aria-live="polite">

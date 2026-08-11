@@ -9,7 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getProduct, type Product } from "./products";
+import type { Product } from "./products";
+import { useProducts } from "./products-context";
 
 export type CartLine = {
   productId: string;
@@ -36,6 +37,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = "fv-cart";
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { get } = useProducts();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -43,21 +45,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as CartLine[];
-        setLines(parsed.filter((l) => getProduct(l.productId)));
-      }
+      if (raw) setLines(JSON.parse(raw) as CartLine[]);
     } catch {
       /* corrupted storage — start empty */
     }
     setHydrated(true);
   }, []);
 
+  /* Товар мог исчезнуть из каталога, пока корзина лежала в localStorage.
+     Отбираем на рендере, а не при загрузке: каталог приходит с сервера и на
+     момент чтения хранилища может быть ещё не тем, что нужно. */
+  const known = useMemo(
+    () => lines.filter((l) => get(l.productId)),
+    [lines, get],
+  );
+
   useEffect(() => {
     if (hydrated) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(known));
     }
-  }, [lines, hydrated]);
+  }, [known, hydrated]);
 
   const add = useCallback((productId: string, size: string | null) => {
     setLines((prev) => {
@@ -105,20 +112,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     let count = 0;
     let totalRub = 0;
     let totalUsd = 0;
-    for (const l of lines) {
-      const p: Product | undefined = getProduct(l.productId);
+    for (const l of known) {
+      const p: Product | undefined = get(l.productId);
       if (!p) continue;
       count += l.qty;
       totalRub += p.priceRub * l.qty;
       totalUsd += p.priceUsd * l.qty;
     }
     return { count, totalRub, totalUsd };
-  }, [lines]);
+  }, [known, get]);
 
   return (
     <CartContext.Provider
       value={{
-        lines,
+        lines: known,
         count,
         totalRub,
         totalUsd,

@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "crypto";
-import { getProduct } from "./products";
+import { getProduct } from "./products-store";
 import type { CartLine } from "./cart";
 
 /**
@@ -31,10 +31,10 @@ function md5(value: string): string {
 }
 
 /** Сумма заказа считается ТОЛЬКО на сервере из каталога — суммам с клиента не верим. */
-export function computeTotalRub(lines: CartLine[]): number {
+export async function computeTotalRub(lines: CartLine[]): Promise<number> {
   let total = 0;
   for (const line of lines) {
-    const product = getProduct(line.productId);
+    const product = await getProduct(line.productId);
     if (!product) continue;
     const qty = Math.min(Math.max(Math.trunc(line.qty), 1), 9);
     total += product.priceRub * qty;

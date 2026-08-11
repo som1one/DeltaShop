@@ -4,13 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice, plural, useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
-import { getProduct } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 import Reveal from "@/components/Reveal";
 import EmptyCart from "@/components/checkout/EmptyCart";
 
 /** /cart — a roomier mirror of the drawer. */
 export default function CartPage() {
   const { lang, t } = useLang();
+
+  const { get } = useProducts();
   const cart = useCart();
 
   if (cart.lines.length === 0) {
@@ -42,7 +44,7 @@ export default function CartPage() {
         <Reveal delay={0.08} amount="some" className="min-w-0 lg:col-span-3">
           <ul className="divide-y divide-linen border-t hairline">
             {cart.lines.map((line) => {
-              const p = getProduct(line.productId);
+              const p = get(line.productId);
               if (!p) return null;
               const cutout = p.imageStyle === "cutout";
               return (

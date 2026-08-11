@@ -6,13 +6,15 @@ import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatPrice, useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
-import { getProduct } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 import { useModalBehavior } from "@/lib/use-modal";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export default function CartDrawer() {
   const { lang, t } = useLang();
+
+  const { get } = useProducts();
   const cart = useCart();
   const dialogRef = useModalBehavior<HTMLDivElement>(cart.isOpen, cart.close);
 
@@ -85,7 +87,7 @@ export default function CartDrawer() {
                   className="flex-1 divide-y divide-linen overflow-y-auto px-7"
                 >
                   {cart.lines.map((line, i) => {
-                    const p = getProduct(line.productId);
+                    const p = get(line.productId);
                     if (!p) return null;
                     return (
                       <motion.li

@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "crypto";
 import { getPool, initDb } from "./db";
 import { computeTotalRub, nextInvId } from "./robokassa";
-import { getProduct } from "./products";
+import { getProduct } from "./products-store";
 import type { CartLine } from "./cart";
 
 export type OrderStatus = "new" | "paid" | "shipped" | "delivered" | "cancelled";
@@ -95,7 +95,7 @@ export async function createOrder(input: {
   await ensureInit();
   const items: OrderItem[] = [];
   for (const line of input.lines) {
-    const product = getProduct(line.productId);
+    const product = await getProduct(line.productId);
     if (!product) continue;
     items.push({
       productId: line.productId,
@@ -104,7 +104,7 @@ export async function createOrder(input: {
       priceRub: product.priceRub,
     });
   }
-  const totalRub = computeTotalRub(input.lines);
+  const totalRub = await computeTotalRub(input.lines);
   const invId = nextInvId();
   const token = randomBytes(16).toString("hex");
   const now = new Date().toISOString();
@@ -192,12 +192,41 @@ export async function markPaid(invId: number): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
-export async function adminList(limit = 100): Promise<Order[]> {
+export async function adminList(
+  opts: {
+    search?: string;
+    status?: OrderStatus | "all";
+    limit?: number;
+  } = {},
+): Promise<Order[]> {
   await ensureInit();
   const pool = getPool();
+  const where: string[] = [];
+  const args: unknown[] = [];
+
+  if (opts.status && opts.status !== "all") {
+    args.push(opts.status);
+    where.push(`status = $${args.length}`);
+  }
+  const search = opts.search?.trim();
+  if (search) {
+    args.push(`%${search.toLowerCase()}%`);
+    const like = `$${args.length}`;
+    /* Номер заказа набирают и как «123», и как «№123» — поэтому ищем
+       по тексту номера наравне с почтой, именем, городом и треком. */
+    where.push(
+      `(LOWER(name) LIKE ${like} OR LOWER(email) LIKE ${like}
+        OR LOWER(city) LIKE ${like} OR LOWER(COALESCE(track, '')) LIKE ${like}
+        OR inv_id::text LIKE ${like})`,
+    );
+  }
+  args.push(Math.min(Math.max(opts.limit ?? 200, 1), 1000));
+
   const res = await pool.query(
-    "SELECT * FROM orders ORDER BY inv_id DESC LIMIT $1",
-    [limit],
+    `SELECT * FROM orders
+     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+     ORDER BY inv_id DESC LIMIT $${args.length}`,
+    args,
   );
   return (res.rows as Row[]).map(toOrder);
 }

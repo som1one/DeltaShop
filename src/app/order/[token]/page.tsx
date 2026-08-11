@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatPrice, useLang, type DictKey } from "@/lib/i18n";
-import { getProduct } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 import Reveal from "@/components/Reveal";
 
 type OrderItem = {
@@ -34,6 +34,8 @@ export default function OrderPage() {
   const params = useParams<{ token: string }>();
   const token = typeof params?.token === "string" ? params.token : "";
   const { lang, t } = useLang();
+
+  const { get } = useProducts();
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing">(
     "loading",
@@ -180,7 +182,7 @@ export default function OrderPage() {
             <h2 className="label">{t("order.items")}</h2>
             <ul className="mt-6 divide-y divide-linen border-y hairline">
               {order.items.map((item) => {
-                const product = getProduct(item.productId);
+                const product = get(item.productId);
                 return (
                   <li
                     key={`${item.productId}-${item.size}`}
@@ -214,7 +216,7 @@ export default function OrderPage() {
                   lang,
                   order.totalRub,
                   order.items.reduce((sum, item) => {
-                    const product = getProduct(item.productId);
+                    const product = get(item.productId);
                     return (
                       sum +
                       (product
