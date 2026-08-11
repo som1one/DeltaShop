@@ -149,28 +149,24 @@ export default function HeroDiptych() {
         onBlur={() => setHovered(null)}
       >
         <KenBurns reduce={reduce}>
-          {/* Mobile: a dedicated top-of-bottle crop — the tall panel shows the
-              near-square photo at full height, so the label text cannot be
-              cropped away with object-position alone */}
-          <Image
-            src="/products/forma-serum-hero-m.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[60%_center] opacity-60 md:hidden"
-          />
-          {/* Atmosphere, not product: the cinematic bottle-on-concrete frame
-              lives on its own so the catalogue shot can be a studio cutout
-              without washing this panel out under the ink scrims. */}
-          <Image
-            src="/products/forma-serum-hero.png"
-            alt=""
-            fill
-            priority
-            sizes="56vw"
-            className="hidden object-cover object-[70%_center] opacity-60 md:block"
-          />
+          {/* The bottle stands IN the dark room rather than papering it: the
+              studio shot is masked free of its white ground (the mask is cut
+              by flood fill from the frame edge, so the white label survives),
+              so it can sit on ink without washing the panel out. Held high —
+              the type block owns the lower half of the panel. */}
+          {/* Высота задана в процентах панели, а не паддингом: проценты в
+              padding считаются от ШИРИНЫ, и на узкой мобильной панели флакон
+              уехал бы на текст. */}
+          <div className="absolute inset-x-0 top-0 h-[68%] md:h-[74%]">
+            <Image
+              src="/products/forma-serum-cutout.png"
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 767px) 100vw, 56vw"
+              className="object-contain p-[12%]"
+            />
+          </div>
         </KenBurns>
         <div
           aria-hidden="true"
