@@ -113,7 +113,7 @@ export const products: Product[] = [
     image: "/products/jeans-wash.png",
     sizes: ["28", "30", "32", "34", "36"],
     video: null,
-    featured: false,
+    featured: true,
     imageStyle: "cutout",
   },
   {

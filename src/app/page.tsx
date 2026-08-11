@@ -6,6 +6,7 @@ import { useLang } from "@/lib/i18n";
 import { featured, getProduct } from "@/lib/products";
 import ProductCard from "@/components/ProductCard";
 import Reveal, { RevealGroup, RevealItem } from "@/components/Reveal";
+import HeroProductCard from "@/components/catalog/HeroProductCard";
 import HeroDiptych from "@/components/home/HeroDiptych";
 import HeroTypographic from "@/components/home/HeroTypographic";
 import ParallaxFrame from "@/components/home/ParallaxFrame";
@@ -15,7 +16,9 @@ const cap = getProduct("cap-drape")!;
 
 export default function Home() {
   const { lang, t } = useLang();
-  const items = featured();
+  /* Five featured pieces: the lead runs two columns wide, so both the
+     two- and three-column grids close without an orphan row. */
+  const [lead, ...rest] = featured();
 
   /* The "25%" moment: lift the number out of the title so it can go huge */
   const partnersTitle = t("home.partners.title");
@@ -56,8 +59,16 @@ export default function Home() {
               </Link>
             </div>
           </Reveal>
-          <RevealGroup className="mt-12 grid gap-x-6 gap-y-12 md:mt-16 md:grid-cols-2 xl:grid-cols-4">
-            {items.map((p) => (
+          <RevealGroup className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 md:mt-16 lg:grid-cols-3">
+            {lead ? (
+              <RevealItem key={lead.id} className="sm:col-span-2">
+                <HeroProductCard
+                  product={lead}
+                  sizes="(max-width: 640px) 96vw, (max-width: 1024px) 92vw, 60vw"
+                />
+              </RevealItem>
+            ) : null}
+            {rest.map((p) => (
               <RevealItem key={p.id}>
                 <ProductCard product={p} />
               </RevealItem>

@@ -33,10 +33,31 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - app
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/tls-params.conf:/etc/nginx/conf.d/00-tls.conf:ro
+      - ./nginx/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot
+    # Reload every 6h so a renewed certificate is picked up without downtime.
+    command: >
+      /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renewal attempt twice a day; certbot itself no-ops until the cert is
+    # within 30 days of expiry. First issuance: scripts/init-letsencrypt.sh
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done"
 
 volumes:
   pgdata:
+  certbot_conf:
+  certbot_www:
