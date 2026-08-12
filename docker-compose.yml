@@ -26,6 +26,9 @@ services:
       ROBOKASSA_PASSWORD1: ${ROBOKASSA_PASSWORD1:-}
       ROBOKASSA_PASSWORD2: ${ROBOKASSA_PASSWORD2:-}
       ROBOKASSA_TEST: ${ROBOKASSA_TEST:-1}
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
+      SITE_URL: ${SITE_URL:-https://forma-visual.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     # Фото, загруженные из админки, живут вне образа и переживают пересборку
     volumes:

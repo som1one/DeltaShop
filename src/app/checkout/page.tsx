@@ -62,11 +62,11 @@ export default function CheckoutPage() {
       return;
     }
 
-    /* Robokassa: сервер строит подписанную ссылку и мы уходим на оплату.
+    /* ЮKassa: сервер создаёт заказ и платёж, мы уходим на его страницу.
        Пока ключи не настроены (или сеть недоступна) — демо-экран успеха. */
     setSubmitting(true);
     try {
-      const res = await fetch("/api/robokassa/create", {
+      const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -354,10 +354,10 @@ export default function CheckoutPage() {
                       <h2 className="label">{t("checkout.step.payment")}</h2>
                       <div className="mt-6 flex flex-col gap-2 border hairline bg-porcelain p-5 md:p-6">
                         <span className="label">
-                          {t("checkout.payment.robokassa")}
+                          {t("checkout.payment.provider")}
                         </span>
                         <span className="text-xs leading-relaxed text-muted">
-                          {t("checkout.payment.robokassa.note")}
+                          {t("checkout.payment.provider.note")}
                         </span>
                       </div>
                     </div>

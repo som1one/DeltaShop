@@ -1,7 +1,7 @@
 import "server-only";
 import { randomBytes } from "crypto";
 import { getPool, initDb } from "./db";
-import { computeTotalRub, nextInvId } from "./robokassa";
+import { computeTotalRub, nextInvId } from "./pricing";
 import { getProduct } from "./products-store";
 import type { CartLine } from "./cart";
 

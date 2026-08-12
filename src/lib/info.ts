@@ -38,7 +38,7 @@ export const infoPages: Record<
         {
           heading: "Оплата",
           paragraphs: [
-            "Robokassa — карты РФ, СБП и электронные кошельки. Зарубежные карты Visa и Mastercard принимаем через международный модуль Robokassa.",
+            "ЮKassa — банковские карты, СБП и электронные кошельки.",
             "Деньги списываются один раз, чек приходит на почту.",
           ],
         },
@@ -64,7 +64,7 @@ export const infoPages: Record<
         {
           heading: "Payment",
           paragraphs: [
-            "Robokassa — RU cards, SBP and wallets. International Visa and Mastercard are accepted through Robokassa's cross-border module.",
+            "YooKassa — bank cards, SBP and wallets.",
             "You are charged once; the receipt arrives by email.",
           ],
         },
