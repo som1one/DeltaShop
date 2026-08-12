@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminFetch, AdminError } from "@/lib/admin-client";
 
-type OrderStatus = "new" | "paid" | "shipped" | "delivered" | "cancelled";
+type OrderStatus =
+  | "new"
+  | "paid"
+  | "accepted"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
 
 type AdminOrder = {
   invId: number;
@@ -18,18 +24,30 @@ type AdminOrder = {
   totalRub: number;
   items: { productId: string; size: string | null; qty: number }[];
   track: string | null;
+  stageNotes?: Record<string, string>;
   createdAt: string;
 };
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  new: "Принят",
+  new: "Ждёт оплаты",
   paid: "Оплачен",
+  accepted: "Принят",
   shipped: "Отправлен",
   delivered: "Доставлен",
   cancelled: "Отменён",
 };
 
 const STATUSES = Object.keys(STATUS_LABEL) as OrderStatus[];
+
+/* Этапы, которые видит покупатель на странице заказа: к каждому можно
+   приписать строку — например, адрес пункта выдачи на «Доставлен». */
+const STAGES: OrderStatus[] = [
+  "paid",
+  "accepted",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
 
 export default function OrdersSection({ adminKey }: { adminKey: string }) {
   const [orders, setOrders] = useState<AdminOrder[] | null>(null);
@@ -67,7 +85,12 @@ export default function OrdersSection({ adminKey }: { adminKey: string }) {
 
   const update = async (
     invId: number,
-    patch: { status?: OrderStatus; track?: string | null },
+    patch: {
+      status?: OrderStatus;
+      track?: string | null;
+      stage?: OrderStatus;
+      note?: string | null;
+    },
   ) => {
     setSavingId(invId);
     try {
@@ -257,11 +280,64 @@ export default function OrdersSection({ adminKey }: { adminKey: string }) {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-4 text-xs text-muted">
-                    Ссылка покупателя:{" "}
-                    <a className="link-quiet" href={`/order/${order.token}`}>
-                      /order/{order.token.slice(0, 8)}…
+
+                  <div className="mt-6">
+                    <p className="label label-muted">Комментарии к этапам</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Покупатель видит их на странице заказа под нужным этапом.
+                    </p>
+                    <div className="mt-4 grid gap-3">
+                      {STAGES.map((stage) => (
+                        <label
+                          key={stage}
+                          className="grid grid-cols-[128px_1fr] items-center gap-3"
+                        >
+                          <span className="text-xs text-muted">
+                            {STATUS_LABEL[stage]}
+                          </span>
+                          <input
+                            className="field w-full text-xs"
+                            defaultValue={order.stageNotes?.[stage] ?? ""}
+                            placeholder={
+                              stage === "delivered"
+                                ? "например: в пункте выдачи СДЭК, ул. Ленина 5"
+                                : "необязательно"
+                            }
+                            disabled={savingId === order.invId}
+                            onBlur={(e) => {
+                              const v = e.target.value.trim();
+                              if (v !== (order.stageNotes?.[stage] ?? "")) {
+                                update(order.invId, {
+                                  stage,
+                                  note: v === "" ? null : v,
+                                });
+                              }
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="mt-6 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted">
+                    <a
+                      className="link-quiet"
+                      href={`/order/${order.token}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Страница заказа у покупателя ↗
                     </a>
+                    {order.track && (
+                      <a
+                        className="link-quiet"
+                        href={`https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(order.track)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Отследить в СДЭК ↗
+                      </a>
+                    )}
                   </p>
                 </div>
               )}

@@ -3,8 +3,9 @@ import { checkAdminKey } from "@/lib/admin-auth";
 import { adminList, type OrderStatus } from "@/lib/orders";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  new: "Принят",
+  new: "Ждёт оплаты",
   paid: "Оплачен",
+  accepted: "Принят",
   shipped: "Отправлен",
   delivered: "Доставлен",
   cancelled: "Отменён",

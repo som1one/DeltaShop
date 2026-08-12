@@ -5,7 +5,14 @@ import { computeTotalRub, nextInvId } from "./pricing";
 import { getProduct } from "./products-store";
 import type { CartLine } from "./cart";
 
-export type OrderStatus = "new" | "paid" | "shipped" | "delivered" | "cancelled";
+/** Поток: заказ оформлен → оплачен → принят в работу → отправлен → доставлен. */
+export type OrderStatus =
+  | "new"
+  | "paid"
+  | "accepted"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
 
 export type OrderItem = {
   productId: string;
@@ -28,6 +35,8 @@ export type Order = {
   totalRub: number;
   items: OrderItem[];
   track: string | null;
+  /** Комментарий администратора к каждому этапу: { shipped: "…" } */
+  stageNotes: Record<string, string>;
   createdAt: string;
   paidAt: string | null;
   updatedAt: string;
@@ -47,10 +56,26 @@ type Row = {
   total_rub: number;
   items_json: string;
   track: string | null;
+  stage_notes_json: string | null;
   created_at: string;
   paid_at: string | null;
   updated_at: string;
 };
+
+function parseNotes(raw: string | null): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === "string" && v.trim()) out[k] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 function toOrder(row: Row): Order {
   return {
@@ -67,6 +92,7 @@ function toOrder(row: Row): Order {
     totalRub: row.total_rub,
     items: JSON.parse(row.items_json) as OrderItem[],
     track: row.track,
+    stageNotes: parseNotes(row.stage_notes_json),
     createdAt: row.created_at,
     paidAt: row.paid_at,
     updatedAt: row.updated_at,
@@ -233,17 +259,37 @@ export async function adminList(
 
 export async function adminUpdate(
   invId: number,
-  patch: { status?: OrderStatus; track?: string | null },
+  patch: {
+    status?: OrderStatus;
+    track?: string | null;
+    /** Комментарий к одному этапу; пустой текст убирает его */
+    stageNote?: { stage: string; text: string | null };
+  },
 ): Promise<Order | null> {
   await ensureInit();
   const order = await getByInvId(invId);
   if (!order) return null;
   const status = patch.status ?? order.status;
   const track = patch.track === undefined ? order.track : patch.track;
+
+  const notes = { ...order.stageNotes };
+  if (patch.stageNote) {
+    const text = patch.stageNote.text?.trim();
+    if (text) notes[patch.stageNote.stage] = text;
+    else delete notes[patch.stageNote.stage];
+  }
+
   const pool = getPool();
   await pool.query(
-    "UPDATE orders SET status = $1, track = $2, updated_at = $3 WHERE inv_id = $4",
-    [status, track, new Date().toISOString(), invId],
+    `UPDATE orders SET status = $1, track = $2, stage_notes_json = $3,
+       updated_at = $4 WHERE inv_id = $5`,
+    [
+      status,
+      track,
+      Object.keys(notes).length ? JSON.stringify(notes) : null,
+      new Date().toISOString(),
+      invId,
+    ],
   );
   return getByInvId(invId);
 }

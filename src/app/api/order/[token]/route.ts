@@ -19,6 +19,7 @@ export async function GET(
     region: order.region,
     city: order.city,
     track: order.track,
+    stageNotes: order.stageNotes,
     createdAt: order.createdAt,
     paidAt: order.paidAt,
     updatedAt: order.updatedAt,

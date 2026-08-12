@@ -50,6 +50,8 @@ export async function initDb(): Promise<void> {
       updated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_orders_email ON orders(email);
+    -- Комментарии к этапам: {"shipped":"Передан в СДЭК", "delivered":"В пункте выдачи…"}
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS stage_notes_json TEXT;
 
     CREATE TABLE IF NOT EXISTS products (
       id             TEXT PRIMARY KEY,

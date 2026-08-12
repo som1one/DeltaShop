@@ -20,15 +20,25 @@ export async function GET(request: Request) {
 const STATUSES: OrderStatus[] = [
   "new",
   "paid",
+  "accepted",
   "shipped",
   "delivered",
   "cancelled",
 ];
 
+/** Этапы, к которым можно приписать комментарий (тот же список, без «оформлен») */
+const STAGES = ["paid", "accepted", "shipped", "delivered", "cancelled"];
+
 export async function PATCH(request: Request) {
   const denied = checkAdminKey(request);
   if (denied) return denied;
-  let body: { invId?: number; status?: string; track?: string | null };
+  let body: {
+    invId?: number;
+    status?: string;
+    track?: string | null;
+    stage?: string;
+    note?: string | null;
+  };
   try {
     body = await request.json();
   } catch {
@@ -38,7 +48,11 @@ export async function PATCH(request: Request) {
   if (!Number.isInteger(invId)) {
     return NextResponse.json({ error: "bad invId" }, { status: 400 });
   }
-  const patch: { status?: OrderStatus; track?: string | null } = {};
+  const patch: {
+    status?: OrderStatus;
+    track?: string | null;
+    stageNote?: { stage: string; text: string | null };
+  } = {};
   if (body.status !== undefined) {
     if (!STATUSES.includes(body.status as OrderStatus)) {
       return NextResponse.json({ error: "bad status" }, { status: 400 });
@@ -47,6 +61,17 @@ export async function PATCH(request: Request) {
   }
   if (body.track !== undefined) {
     patch.track = body.track === null ? null : String(body.track).slice(0, 64);
+  }
+  if (body.stage !== undefined) {
+    if (!STAGES.includes(String(body.stage))) {
+      return NextResponse.json({ error: "bad stage" }, { status: 400 });
+    }
+    /* note не передали или передали null — комментарий с этапа снимается */
+    const text =
+      body.note === undefined || body.note === null
+        ? null
+        : String(body.note).slice(0, 300);
+    patch.stageNote = { stage: String(body.stage), text };
   }
   const order = await adminUpdate(invId, patch);
   if (!order) {

@@ -16,18 +16,26 @@ type OrderItem = {
 
 type PublicOrder = {
   invId: number;
-  status: "new" | "paid" | "shipped" | "delivered" | "cancelled";
+  status: "new" | "paid" | "accepted" | "shipped" | "delivered" | "cancelled";
   items: OrderItem[];
   totalRub: number;
   region: "cis" | "intl";
   city: string;
   track: string | null;
+  stageNotes?: Record<string, string>;
   createdAt: string;
   paidAt: string | null;
   updatedAt: string;
 };
 
-const FLOW: PublicOrder["status"][] = ["new", "paid", "shipped", "delivered"];
+/* Лента начинается с оплаты: пока заказ не оплачен, ни один этап не пройден,
+   а «оформлен и ждёт оплаты» говорится строкой над лентой. */
+const FLOW: PublicOrder["status"][] = [
+  "paid",
+  "accepted",
+  "shipped",
+  "delivered",
+];
 
 /** Страница отслеживания заказа по секретной ссылке. */
 export default function OrderPage() {
@@ -82,18 +90,20 @@ export default function OrderPage() {
   }
 
   const cancelled = order.status === "cancelled";
+  /* Неоплаченный заказ (и отменённый до оплаты) не проходит ни одного этапа */
   const reachedIndex = cancelled
     ? order.paidAt
-      ? 1
-      : 0
+      ? 0
+      : -1
     : FLOW.indexOf(order.status);
   const steps: { key: PublicOrder["status"]; reached: boolean }[] = (
-    cancelled ? (FLOW.slice(0, reachedIndex + 1) as typeof FLOW) : FLOW
+    cancelled ? (FLOW.slice(0, Math.max(reachedIndex + 1, 0)) as typeof FLOW) : FLOW
   ).map((key, i) => ({ key, reached: i <= reachedIndex }));
   if (cancelled) steps.push({ key: "cancelled", reached: true });
 
+  const notes = order.stageNotes ?? {};
+
   const dateFor = (key: PublicOrder["status"]): string | null => {
-    if (key === "new") return order.createdAt;
     if (key === "paid") return order.paidAt;
     if (key === "cancelled" || key === order.status) return order.updatedAt;
     return null;
@@ -119,6 +129,11 @@ export default function OrderPage() {
       <div className="mt-14 grid gap-14 md:mt-20 lg:grid-cols-5 lg:gap-20">
         {/* Status timeline */}
         <Reveal delay={0.08} amount="some" className="min-w-0 lg:col-span-3">
+          {order.status === "new" && (
+            <p className="mb-6 text-[13px] leading-relaxed text-muted">
+              {t("order.status.new.note")}
+            </p>
+          )}
           <ol className="border-t hairline">
             {steps.map((step) => {
               const active = step.key === order.status;
@@ -149,6 +164,11 @@ export default function OrderPage() {
                     {active && (
                       <p className="mt-1.5 text-[13px] text-muted">
                         {t(`order.status.${step.key}.note` as DictKey)}
+                      </p>
+                    )}
+                    {notes[step.key] && (
+                      <p className="mt-2 text-[13px] leading-relaxed text-strong">
+                        {notes[step.key]}
                       </p>
                     )}
                     {step.key === "shipped" && order.track && (
