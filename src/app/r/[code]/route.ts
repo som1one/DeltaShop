@@ -27,6 +27,16 @@ function safeTarget(raw: string | null): string {
 /** Превью-загрузчики мессенджеров ходят по ссылке сами — это не переход. */
 const BOT = /bot|crawl|spider|preview|facebookexternalhit|telegram|whatsapp|vkshare|slack|discord|skype|curl|wget|python-requests|headless/i;
 
+/**
+ * Уводим относительным адресом. Абсолютный собирать не из чего: за nginx
+ * приложение видит собственный служебный хост (0.0.0.0:3000), и переход
+ * по партнёрской ссылке уезжал именно туда. Относительный Location
+ * браузер разрешает от самой ссылки — домен всегда верный.
+ */
+function goTo(target: string): NextResponse {
+  return new NextResponse(null, { status: 302, headers: { Location: target } });
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ code: string }> },
@@ -38,14 +48,10 @@ export async function GET(
 
   /* Код не тот — просто уводим на витрину, без намёка на то, существует
      ли такой партнёр. */
-  if (!code) {
-    return NextResponse.redirect(new URL(target, url.origin), 302);
-  }
+  if (!code) return goTo(target);
 
   const partner = await findActiveByRefCode(code);
-  if (!partner) {
-    return NextResponse.redirect(new URL(target, url.origin), 302);
-  }
+  if (!partner) return goTo(target);
 
   const userAgent = request.headers.get("user-agent") ?? "";
   /* Ссылку могут вставить картинкой или в iframe на чужом сайте, чтобы
@@ -54,7 +60,7 @@ export async function GET(
   const isDocument = dest === null || dest === "document";
   const isBot = BOT.test(userAgent);
 
-  const response = NextResponse.redirect(new URL(target, url.origin), 302);
+  const response = goTo(target);
   if (!isDocument || isBot) return response;
 
   const ip =
