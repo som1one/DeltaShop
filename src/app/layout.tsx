@@ -3,6 +3,8 @@ import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import { CartProvider } from "@/lib/cart";
 import { ProductsProvider } from "@/lib/products-context";
+import { AuthProvider } from "@/lib/auth-context";
+import { getSessionUser } from "@/lib/auth";
 import { listProducts } from "@/lib/products-store";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -40,21 +42,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const products = await listProducts();
+  /* Каталог и текущий покупатель приходят одним запросом к базе на рендер:
+     шапка обязана с первого кадра знать, войден человек или нет. */
+  const [products, user] = await Promise.all([listProducts(), getSessionUser()]);
 
   return (
     <html lang="ru" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         <ProductsProvider products={products}>
-          <LanguageProvider>
-            <CartProvider>
-              <SmoothScroll />
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <CartDrawer />
-            </CartProvider>
-          </LanguageProvider>
+          <AuthProvider initialUser={user}>
+            <LanguageProvider>
+              <CartProvider>
+                <SmoothScroll />
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+                <CartDrawer />
+              </CartProvider>
+            </LanguageProvider>
+          </AuthProvider>
         </ProductsProvider>
       </body>
     </html>

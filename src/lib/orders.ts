@@ -3,6 +3,13 @@ import { randomBytes } from "crypto";
 import { getPool, initDb } from "./db";
 import { computeTotalRub, nextInvId } from "./pricing";
 import { getProduct } from "./products-store";
+import {
+  accrueForPaidOrder,
+  cancelAccrual,
+  restoreCancelledAccrual,
+  shiftRipeToDelivery,
+  verifyAccrual,
+} from "./partner-ledger";
 import type { CartLine } from "./cart";
 
 /** Поток: заказ оформлен → оплачен → принят в работу → отправлен → доставлен. */
@@ -25,6 +32,8 @@ export type Order = {
   invId: number;
   token: string;
   status: OrderStatus;
+  /** Владелец заказа; null — заказы, оформленные до появления учёток */
+  userId: number | null;
   name: string;
   email: string;
   phone: string;
@@ -37,8 +46,11 @@ export type Order = {
   track: string | null;
   /** Комментарий администратора к каждому этапу: { shipped: "…" } */
   stageNotes: Record<string, string>;
+  /** Код партнёра из ссылки — снимок на момент оформления */
+  refCode: string | null;
   createdAt: string;
   paidAt: string | null;
+  deliveredAt: string | null;
   updatedAt: string;
 };
 
@@ -46,6 +58,7 @@ type Row = {
   inv_id: number;
   token: string;
   status: string;
+  user_id: number | null;
   name: string;
   email: string;
   phone: string;
@@ -57,8 +70,10 @@ type Row = {
   items_json: string;
   track: string | null;
   stage_notes_json: string | null;
+  ref_code: string | null;
   created_at: string;
   paid_at: string | null;
+  delivered_at: string | null;
   updated_at: string;
 };
 
@@ -82,6 +97,7 @@ function toOrder(row: Row): Order {
     invId: row.inv_id,
     token: row.token,
     status: row.status as OrderStatus,
+    userId: row.user_id,
     name: row.name,
     email: row.email,
     phone: row.phone,
@@ -93,8 +109,10 @@ function toOrder(row: Row): Order {
     items: JSON.parse(row.items_json) as OrderItem[],
     track: row.track,
     stageNotes: parseNotes(row.stage_notes_json),
+    refCode: row.ref_code,
     createdAt: row.created_at,
     paidAt: row.paid_at,
+    deliveredAt: row.delivered_at,
     updatedAt: row.updated_at,
   };
 }
@@ -110,6 +128,7 @@ async function ensureInit(): Promise<void> {
 
 export async function createOrder(input: {
   lines: CartLine[];
+  userId: number;
   name: string;
   email: string;
   phone: string;
@@ -117,6 +136,8 @@ export async function createOrder(input: {
   city: string;
   address: string;
   culture: "ru" | "en";
+  /** Код партнёра из куки; дальше он в заказе не меняется */
+  refCode?: string | null;
 }): Promise<Order> {
   await ensureInit();
   const items: OrderItem[] = [];
@@ -138,12 +159,15 @@ export async function createOrder(input: {
   const pool = getPool();
   await pool.query(
     `INSERT INTO orders
-       (inv_id, token, status, name, email, phone, region, city, address,
-        culture, total_rub, items_json, created_at, updated_at)
-     VALUES ($1, $2, 'new', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       (inv_id, token, status, user_id, name, email, phone, region, city,
+        address, culture, total_rub, items_json, ref_code, created_at,
+        updated_at)
+     VALUES ($1, $2, 'new', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+             $14, $15)`,
     [
       invId,
       token,
+      input.userId,
       input.name,
       input.email.toLowerCase(),
       input.phone,
@@ -153,12 +177,27 @@ export async function createOrder(input: {
       input.culture,
       totalRub,
       JSON.stringify(items),
+      input.refCode ?? null,
       now,
       now,
     ],
   );
 
   return (await getByInvId(invId))!;
+}
+
+/** Заказы одной учётки — лента кабинета, свежие сверху. */
+export async function listByUser(
+  userId: number,
+  limit = 100,
+): Promise<Order[]> {
+  await ensureInit();
+  const pool = getPool();
+  const res = await pool.query(
+    "SELECT * FROM orders WHERE user_id = $1 ORDER BY inv_id DESC LIMIT $2",
+    [userId, Math.min(Math.max(limit, 1), 500)],
+  );
+  return (res.rows as Row[]).map(toOrder);
 }
 
 export async function getByInvId(invId: number): Promise<Order | null> {
@@ -206,16 +245,92 @@ export async function findTokenByNumberEmail(
   return row?.token ?? null;
 }
 
-export async function markPaid(invId: number): Promise<boolean> {
+/**
+ * Откуда пришло подтверждение оплаты. От этого зависит судьба партнёрского
+ * начисления: деньги печатаются только там, где оплата проверена.
+ *  yookassa  — вебхук, состояние платежа перечитано у самой ЮKassa;
+ *  robokassa — подпись верна, но сумма с заказом не сверяется → ручная проверка.
+ *
+ * Оплату без провайдера сюда не приносят вовсе: пока ключи не заданы, заказ
+ * остаётся неоплаченным, а «оплачен вручную» проставляется в админке.
+ */
+export type PaidSource = "yookassa" | "robokassa";
+
+/**
+ * Помечает заказ оплаченным и в ТОЙ ЖЕ транзакции начисляет партнёрское
+ * вознаграждение. Разнести их нельзя: между двумя запросами появляется
+ * окно, в котором заказ оплачен, а денег партнёра не существует.
+ */
+export async function markPaid(
+  invId: number,
+  source: PaidSource,
+): Promise<boolean> {
   await ensureInit();
   const now = new Date().toISOString();
   const pool = getPool();
-  const res = await pool.query(
-    `UPDATE orders SET status = 'paid', paid_at = $1, updated_at = $2
-     WHERE inv_id = $3 AND status = 'new'`,
-    [now, now, invId],
-  );
-  return (res.rowCount ?? 0) > 0;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    /* Вебхук ЮKassa приходит с повторами и может опоздать: к этому моменту
+       администратор уже мог перевести заказ в «принят» или «отправлен».
+       Поэтому статус двигаем только из 'new', а отметку об оплате ставим
+       в любом случае — иначе оплаченный заказ остаётся без paid_at и без
+       партнёрского начисления навсегда. */
+    const res = await client.query(
+      `UPDATE orders
+          SET status     = CASE WHEN status = 'new' THEN 'paid' ELSE status END,
+              paid_at    = COALESCE(paid_at, $1),
+              updated_at = $2
+        WHERE inv_id = $3 AND status <> 'cancelled'
+        RETURNING ref_code, total_rub, user_id, email, delivered_at, paid_at,
+                  (paid_at = $1) AS just_paid`,
+      [now, now, invId],
+    );
+    const row = res.rows[0] as
+      | {
+          ref_code: string | null;
+          total_rub: number;
+          user_id: number | null;
+          email: string;
+          delivered_at: string | null;
+          paid_at: string;
+          just_paid: boolean;
+        }
+      | undefined;
+
+    /* Заказа нет или он отменён — платить нечему */
+    if (!row) {
+      await client.query("ROLLBACK");
+      console.warn(`Оплата №${invId} (${source}): заказ не найден или отменён`);
+      return false;
+    }
+
+    if (row.ref_code) {
+      /* Вставка идемпотентна по первичному ключу, поэтому вызываем её и на
+         повторном вебхуке: если начисления ещё нет, оно появится. */
+      await accrueForPaidOrder(client, {
+        invId,
+        refCode: row.ref_code,
+        baseRub: row.total_rub,
+        orderUserId: row.user_id,
+        orderEmail: row.email,
+        paidAt: row.paid_at,
+        deliveredAt: row.delivered_at,
+        verified: source === "yookassa",
+      });
+      /* Оплату, помеченную руками, настоящий вебхук подтверждает задним
+         числом — начисление выходит из ручной проверки само. */
+      if (source === "yookassa") await verifyAccrual(client, invId);
+    }
+
+    await client.query("COMMIT");
+    return row.just_paid;
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 export async function adminList(
@@ -279,17 +394,71 @@ export async function adminUpdate(
     else delete notes[patch.stageNote.stage];
   }
 
+  const now = new Date().toISOString();
+  /* Дата доставки проставляется один раз: от неё считается срок, после
+     которого партнёрское начисление можно выплачивать. */
+  const deliveredAt =
+    status === "delivered" ? (order.deliveredAt ?? now) : order.deliveredAt;
+  /* Оплату можно проставить и руками — деньги пришли переводом или вебхук
+     ЮKassa не настроен. Ловим это по отсутствию отметки об оплате, а не по
+     переходу «new → paid»: администратор вправе сразу поставить «отправлен».
+     Провайдер такую оплату не подтверждал, поэтому начисление уходит в
+     ручную проверку, а не сразу в деньги. */
+  const PAID_STAGES: OrderStatus[] = ["paid", "accepted", "shipped", "delivered"];
+  const paidByHand = order.paidAt === null && PAID_STAGES.includes(status);
+  const paidAt = paidByHand ? now : order.paidAt;
+
   const pool = getPool();
-  await pool.query(
-    `UPDATE orders SET status = $1, track = $2, stage_notes_json = $3,
-       updated_at = $4 WHERE inv_id = $5`,
-    [
-      status,
-      track,
-      Object.keys(notes).length ? JSON.stringify(notes) : null,
-      new Date().toISOString(),
-      invId,
-    ],
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `UPDATE orders SET status = $1, track = $2, stage_notes_json = $3,
+         delivered_at = $4, paid_at = $5, updated_at = $6 WHERE inv_id = $7`,
+      [
+        status,
+        track,
+        Object.keys(notes).length ? JSON.stringify(notes) : null,
+        deliveredAt,
+        paidAt,
+        now,
+        invId,
+      ],
+    );
+
+    /* Начисление рождается в той же транзакции, что и отметка об оплате:
+       иначе появляется окно, в котором заказ оплачен, а денег партнёра нет,
+       и повторить это действие уже нечем. */
+    if (paidByHand && order.refCode) {
+      await accrueForPaidOrder(client, {
+        invId,
+        refCode: order.refCode,
+        baseRub: order.totalRub,
+        orderUserId: order.userId,
+        orderEmail: order.email,
+        paidAt: now,
+        deliveredAt,
+        verified: false,
+      });
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+
+  /* Судьба партнёрского начисления идёт следом за статусом заказа */
+  if (order.refCode) {
+    if (status === "cancelled") await cancelAccrual(invId, "order_cancelled");
+    else {
+      /* Заказ вернули из отмены — значит, отменяли по ошибке */
+      if (order.status === "cancelled") await restoreCancelledAccrual(invId);
+      if (status === "delivered" && deliveredAt) {
+        await shiftRipeToDelivery(invId, deliveredAt);
+      }
+    }
+  }
   return getByInvId(invId);
 }

@@ -1,14 +1,13 @@
 "use client";
 
-import { formatPrice, useLang } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 import Reveal, { RevealGroup, RevealItem } from "@/components/Reveal";
-import LinkGenerator from "@/components/partners/LinkGenerator";
-import CountUp from "@/components/partners/CountUp";
+import PartnerCta from "@/components/partners/PartnerCta";
+import PartnerStage from "@/components/partners/PartnerStage";
 import ChromeSheen from "@/components/partners/ChromeSheen";
 
 export default function PartnersPage() {
-  const { lang, t } = useLang();
-  const nf = (n: number) => n.toLocaleString(lang === "ru" ? "ru-RU" : "en-US");
+  const { t } = useLang();
 
   const steps = [
     {
@@ -25,20 +24,6 @@ export default function PartnersPage() {
       n: "03",
       title: t("partners.step3.title"),
       text: t("partners.step3.text"),
-    },
-  ];
-
-  /* Raw values animate in CountUp; each frame re-formats via the same
-     locale formatter, so grouping and currency stay intact mid-count */
-  const count = (n: number) => nf(Math.round(n));
-  const money = (n: number) => formatPrice(lang, Math.round(n), Math.round(n));
-  const stats = [
-    { value: 1284, format: count, label: t("partners.stats.clicks") },
-    { value: 37, format: count, label: t("partners.stats.orders") },
-    {
-      value: lang === "ru" ? 214700 : 2310,
-      format: money,
-      label: t("partners.stats.earned"),
     },
   ];
 
@@ -89,43 +74,15 @@ export default function PartnersPage() {
         </RevealGroup>
       </section>
 
-      {/* Link generator — the automation demo */}
+      {/* Заявка — из кабинета */}
       <section className="measure gutter pb-24 md:pb-36">
         <Reveal className="mx-auto max-w-3xl">
-          <LinkGenerator />
+          <PartnerCta />
         </Reveal>
       </section>
 
-      {/* Mock partner cabinet */}
-      <section className="dark-stage grain relative py-24 md:py-36">
-        <div className="measure gutter">
-          <Reveal>
-            <h2 className="label">{t("partners.stats.title")}</h2>
-          </Reveal>
-          <RevealGroup className="mt-10 grid divide-steel border-t hairline md:mt-14 md:grid-cols-3 md:divide-x">
-            {stats.map((stat) => (
-              <RevealItem
-                key={stat.label}
-                className="border-b hairline py-9 last:border-b-0 md:border-b-0 md:px-12 md:py-14 md:first:pl-0 md:last:pr-0"
-              >
-                <p className="display text-4xl tabular-nums md:text-5xl">
-                  <CountUp value={stat.value} format={stat.format} />
-                </p>
-                <p className="label label-muted mt-4">{stat.label}</p>
-              </RevealItem>
-            ))}
-          </RevealGroup>
-          <Reveal>
-            <div className="flex flex-col gap-y-3 border-t hairline pt-10 md:flex-row md:items-end md:justify-between md:gap-x-8 md:pt-12">
-              <span className="label label-muted">{t("partners.share")}</span>
-              <span className="display text-chrome text-5xl leading-none md:text-7xl">
-                25%
-              </span>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
+      {/* Условия и расчёт — или настоящие числа вошедшего партнёра */}
+      <PartnerStage />
     </div>
   );
 }

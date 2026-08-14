@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth-context";
 import { useModalBehavior } from "@/lib/use-modal";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -59,6 +60,7 @@ function NavUnderlineLink({
 export default function Header() {
   const { lang, setLang, t } = useLang();
   const cart = useCart();
+  const { user } = useAuth();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -143,6 +145,12 @@ export default function Header() {
 
           {/* Right side — the language switch lives in the menu below lg */}
           <div className="flex items-center justify-end gap-6 lg:gap-8">
+            <Link
+              href={user ? "/account" : "/login"}
+              className="label link-quiet hidden lg:block"
+            >
+              {user ? t("nav.account") : t("nav.login")}
+            </Link>
             <button
               type="button"
               className="label link-quiet hidden lg:block"
@@ -237,7 +245,7 @@ export default function Header() {
                 </motion.div>
               ))}
             </nav>
-            <div className="gutter shrink-0 pb-10">
+            <div className="gutter flex shrink-0 items-center justify-between gap-6 pb-10">
               <button
                 type="button"
                 className="label link-quiet"
@@ -245,6 +253,9 @@ export default function Header() {
               >
                 {lang === "ru" ? "English" : "Русский"}
               </button>
+              <Link href={user ? "/account" : "/login"} className="label link-quiet">
+                {user ? t("nav.account") : t("nav.login")}
+              </Link>
             </div>
           </motion.div>
         )}

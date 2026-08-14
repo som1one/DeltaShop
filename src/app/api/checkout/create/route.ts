@@ -1,17 +1,16 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { createOrder, markPaid } from "@/lib/orders";
-import { getProduct } from "@/lib/products-store";
-import {
-  createPayment,
-  isConfigured,
-  YookassaError,
-} from "@/lib/yookassa";
+import { getSessionUser } from "@/lib/auth";
+import { createOrder } from "@/lib/orders";
+import { startPayment } from "@/lib/order-payment";
+import { normalizeRefCode, REF_COOKIE } from "@/lib/partners";
+import { fillEmptyProfile } from "@/lib/users";
+import { isConfigured } from "@/lib/yookassa";
 import type { CartLine } from "@/lib/cart";
 
 type CreateBody = {
   lines: CartLine[];
   name?: string;
-  email?: string;
   phone?: string;
   region?: "cis" | "intl";
   city?: string;
@@ -19,14 +18,29 @@ type CreateBody = {
   culture?: "ru" | "en";
 };
 
-const SITE_URL = process.env.SITE_URL ?? "https://forma-visual.com";
-
 /**
- * Создаёт заказ в базе и платёж в ЮKassa.
- * Возвращает { token, invId, url } либо { token, invId, demo: true },
- * если ключи не настроены — заказ остаётся в статусе «принят».
+ * Создаёт заказ в базе и платёж в ЮKassa. Возвращает { token, invId, url }
+ * со ссылкой на оплату. Если ключи не настроены — 503: заказ остаётся
+ * неоплаченным, и покупатель видит это словами.
+ *
+ * Заказ оформляется только из учётной записи: почта берётся из неё, а не
+ * из формы, — иначе заказ можно было бы записать на чужой адрес.
  */
 export async function POST(request: Request) {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  /* Проверяем до создания заказа: платить нечем — незачем и заводить в базе
+     заказ, который никто никогда не оплатит. */
+  if (!isConfigured()) {
+    console.error("Чекаут: ключи ЮKassa не заданы, заказ не создаётся");
+    return NextResponse.json(
+      { error: "payment_unavailable" },
+      { status: 503 },
+    );
+  }
+
   let body: CreateBody;
   try {
     body = (await request.json()) as CreateBody;
@@ -37,82 +51,57 @@ export async function POST(request: Request) {
   if (!Array.isArray(body.lines) || body.lines.length === 0) {
     return NextResponse.json({ error: "empty cart" }, { status: 400 });
   }
-  const name = (body.name ?? "").trim();
-  const email = (body.email ?? "").trim();
-  if (!name || !/^\S+@\S+\.\S+$/.test(email)) {
+  const name = (body.name ?? "").trim() || user.name;
+  if (!name) {
     return NextResponse.json({ error: "bad contact" }, { status: 400 });
   }
 
+  const phone = (body.phone ?? "").trim();
+  const city = (body.city ?? "").trim();
+  const address = (body.address ?? "").trim();
+
+  /* Метка партнёра берётся только из куки, поставленной маршрутом /r/:
+     коду из тела запроса верить нельзя — иначе чужую продажу можно
+     переписать на себя одной строкой в консоли браузера. */
+  const refCode = normalizeRefCode(
+    (await cookies()).get(REF_COOKIE)?.value ?? "",
+  );
+
   const order = await createOrder({
     lines: body.lines,
+    userId: user.id,
     name,
-    email,
-    phone: (body.phone ?? "").trim(),
+    email: user.email,
+    phone,
     region: body.region === "intl" ? "intl" : "cis",
-    city: (body.city ?? "").trim(),
-    address: (body.address ?? "").trim(),
+    city,
+    address,
     culture: body.culture === "en" ? "en" : "ru",
+    refCode,
   });
 
   if (order.totalRub <= 0) {
     return NextResponse.json({ error: "empty cart" }, { status: 400 });
   }
 
-  if (!isConfigured()) {
-    /* Демо-режим: шага оплаты нет, покупатель сразу видит «заказ принят» —
-       статус в базе обязан совпадать с тем, что видит человек */
-    await markPaid(order.invId);
-    return NextResponse.json({
-      token: order.token,
-      invId: order.invId,
-      demo: true,
-    });
-  }
+  /* Пустой профиль дозаполняем данными доставки — следующий заказ
+     оформится без повторного ввода. Заполненное не трогаем. */
+  await fillEmptyProfile(user.id, { phone, city, address });
 
-  /* Позиции чека собираем из заказа, а не из корзины: суммы там уже
-     пересчитаны по каталогу на сервере. Сумма строк обязана сойтись
-     с суммой платежа, иначе ЮKassa откажет. */
-  const items = [];
-  for (const item of order.items) {
-    const product = await getProduct(item.productId);
-    const title = product ? product.name[order.culture] : item.productId;
-    items.push({
-      description: item.size ? `${title} (${item.size})` : title,
-      quantity: item.qty,
-      /* Цена ЗА ЕДИНИЦУ: ЮKassa сама умножает на количество, и сумма
-         строк обязана сойтись с суммой платежа. */
-      priceRub: item.priceRub,
-    });
+  const payment = await startPayment(order);
+  const base = { token: order.token, invId: order.invId };
+  if (payment.kind === "redirect") {
+    return NextResponse.json({ ...base, url: payment.url });
   }
-
-  try {
-    const payment = await createPayment({
-      amountRub: order.totalRub,
-      description: `FORMA VISUAL — заказ №${order.invId}`,
-      returnUrl: `${SITE_URL}/checkout/success`,
-      email: order.email,
-      items,
-      /* По metadata уведомление находит заказ — отдельная колонка в базе
-         под идентификатор платежа не нужна. */
-      metadata: { invId: String(order.invId), token: order.token },
-    });
-
-    return NextResponse.json({
-      token: order.token,
-      invId: order.invId,
-      url: payment.confirmationUrl,
-    });
-  } catch (e) {
-    if (e instanceof YookassaError) {
-      console.error(`ЮKassa не создала платёж для №${order.invId}: ${e.message}`);
-      /* Заказ уже в базе и виден в кабинете — покупателю показываем
-         «принят», а не пустую ошибку; оплату можно повторить. */
-      return NextResponse.json({
-        token: order.token,
-        invId: order.invId,
-        unpaid: true,
-      });
-    }
-    throw e;
+  /* Платить нечем: заказ остался в базе неоплаченным, и покупатель должен
+     увидеть это словами, а не экран «заказ принят». */
+  if (payment.kind === "unconfigured") {
+    return NextResponse.json(
+      { ...base, error: "payment_unavailable" },
+      { status: 503 },
+    );
   }
+  /* Заказ уже в базе и виден в кабинете — покупателю показываем
+     «принят», а не пустую ошибку; оплату можно повторить. */
+  return NextResponse.json({ ...base, unpaid: true });
 }

@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useLang } from "@/lib/i18n";
 import type { InfoPageContent } from "@/lib/info";
-import type { Lang } from "@/lib/i18n";
+import type { DictKey, Lang } from "@/lib/i18n";
 import Reveal, { RevealGroup, RevealItem } from "@/components/Reveal";
 
 /** Shared editorial layout for the information pages. */
 export default function InfoPage({
   content,
+  eyebrow = "footer.info",
 }: {
   content: Record<Lang, InfoPageContent>;
+  /** Надзаголовок над названием — «Информация» или «Документы» */
+  eyebrow?: DictKey;
 }) {
   const { lang, t } = useLang();
   const page = content[lang];
@@ -18,7 +21,7 @@ export default function InfoPage({
   return (
     <div className="measure gutter pb-24 pt-28 md:pb-36 md:pt-40">
       <Reveal>
-        <p className="label label-muted">{t("footer.info")}</p>
+        <p className="label label-muted">{t(eyebrow)}</p>
         <h1 className="display mt-6 max-w-4xl break-words text-[clamp(2rem,9vw,4.5rem)] md:text-6xl">
           {page.title}
         </h1>

@@ -16,6 +16,7 @@ export const UPLOAD_ROOT =
   process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
 
 const PRODUCTS_DIR = path.join(UPLOAD_ROOT, "products");
+const RECEIPTS_DIR = path.join(UPLOAD_ROOT, "receipts");
 
 /** Длинная сторона: больше карточке не нужно, а вес растёт заметно. */
 const MAX_SIDE = 1600;
@@ -77,6 +78,38 @@ export async function saveProductImage(
     width: out.info.width,
     height: out.info.height,
   };
+}
+
+/**
+ * Чек по выплате партнёру — документ, а не картинка: пересжимать его нельзя,
+ * поэтому кладём как есть, но только знакомых типов и под случайным именем.
+ * Имя не угадать, и это единственная защита адреса файла: чек содержит имя
+ * получателя и сумму.
+ */
+const RECEIPT_TYPES: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+};
+
+export async function savePartnerReceipt(
+  file: File,
+  payoutId: number,
+): Promise<{ url: string }> {
+  if (file.size > MAX_BYTES) {
+    throw new UploadError("Файл больше 12 МБ");
+  }
+  const ext = RECEIPT_TYPES[file.type];
+  if (!ext) {
+    throw new UploadError("Принимаем PDF, JPG или PNG");
+  }
+  const name = `payout-${payoutId}-${randomBytes(8).toString("hex")}${ext}`;
+  await mkdir(RECEIPTS_DIR, { recursive: true });
+  await writeFile(
+    path.join(RECEIPTS_DIR, name),
+    Buffer.from(await file.arrayBuffer()),
+  );
+  return { url: `/uploads/receipts/${name}` };
 }
 
 /**

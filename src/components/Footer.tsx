@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useLang } from "@/lib/i18n";
+import { seller, sellerLines } from "@/lib/legal";
 
 export default function Footer() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   return (
     <footer className="dark-stage relative">
       <div className="measure gutter pb-10 pt-20 md:pt-28">
@@ -72,6 +73,45 @@ export default function Footer() {
                 <Link href="/order" className="link-quiet">
                   {t("order.lookup.title")}
                 </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="label label-muted mb-5">{t("footer.legal")}</h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <Link href="/offer" className="link-quiet">
+                  {t("footer.offer")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="link-quiet">
+                  {t("footer.privacy")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/partner-terms" className="link-quiet">
+                  {t("partners.rules")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+          {/* Реквизиты продавца — ОГРНИП и ИНН обязаны быть на витрине.
+              Незаполненные поля выпадают из списка сами. */}
+          <div>
+            <h3 className="label label-muted mb-5">{t("footer.requisites")}</h3>
+            {/* break-words: почта и пятнадцатизначный ОГРНИП не влезают
+                в узкую колонку на телефоне */}
+            <ul className="space-y-3 break-words text-sm text-(--text-on-dark-muted)">
+              {sellerLines(lang).map((line) => (
+                <li key={line.label || line.value}>
+                  {line.label ? `${line.label} ${line.value}` : line.value}
+                </li>
+              ))}
+              <li>
+                <a href={`mailto:${seller.email}`} className="link-quiet">
+                  {seller.email}
+                </a>
               </li>
             </ul>
           </div>

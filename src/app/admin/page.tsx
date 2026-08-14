@@ -5,13 +5,15 @@ import { adminFetch, AdminError } from "@/lib/admin-client";
 import OrdersSection from "@/components/admin/OrdersSection";
 import PartnersSection from "@/components/admin/PartnersSection";
 import ProductsSection from "@/components/admin/ProductsSection";
+import UsersSection from "@/components/admin/UsersSection";
 
-type Tab = "products" | "orders" | "partners";
+type Tab = "products" | "orders" | "partners" | "users";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "products", label: "Товары" },
   { id: "orders", label: "Заказы" },
   { id: "partners", label: "Партнёры" },
+  { id: "users", label: "Покупатели" },
 ];
 
 const STORAGE_KEY = "fv-admin-key";
@@ -135,6 +137,7 @@ export default function AdminPage() {
         {tab === "products" && <ProductsSection adminKey={key} />}
         {tab === "orders" && <OrdersSection adminKey={key} />}
         {tab === "partners" && <PartnersSection adminKey={key} />}
+        {tab === "users" && <UsersSection adminKey={key} />}
       </div>
     </section>
   );

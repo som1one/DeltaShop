@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { formatPrice, useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth-context";
 import { useProducts } from "@/lib/products-context";
 import Reveal from "@/components/Reveal";
 import EmptyCart from "@/components/checkout/EmptyCart";
@@ -14,7 +15,8 @@ import OptionCard from "@/components/checkout/OptionCard";
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 type Region = "cis" | "intl";
-type FieldName = "name" | "email" | "phone" | "city" | "address";
+/* Почта не в форме: заказ пишется на адрес учётной записи */
+type FieldName = "name" | "phone" | "city" | "address";
 
 const FORM_ID = "checkout-form";
 
@@ -23,6 +25,7 @@ export default function CheckoutPage() {
 
   const { get } = useProducts();
   const cart = useCart();
+  const { user } = useAuth();
   const reduce = useReducedMotion();
 
   const [region, setRegion] = useState<Region>("cis");
@@ -30,6 +33,7 @@ export default function CheckoutPage() {
   const [orderToken, setOrderToken] = useState<string | null>(null);
   const [orderInvId, setOrderInvId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [payFailed, setPayFailed] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
 
   const clearError = (n: FieldName) =>
@@ -46,9 +50,6 @@ export default function CheckoutPage() {
       "";
     const next: Partial<Record<FieldName, string>> = {};
     if (!value("name")) next.name = t("form.required");
-    const email = value("email");
-    if (!email) next.email = t("form.required");
-    else if (!/^\S+@\S+\.\S+$/.test(email)) next.email = t("form.email");
     const phone = value("phone");
     if (!phone) next.phone = t("form.required");
     else if ((phone.match(/\d/g) ?? []).length < 7)
@@ -72,7 +73,6 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           lines: cart.lines,
           name: value("name"),
-          email: value("email"),
           phone: value("phone"),
           region,
           city: value("city"),
@@ -80,10 +80,22 @@ export default function CheckoutPage() {
           culture: lang,
         }),
       });
+      /* Сессия истекла между открытием чекаута и отправкой — заказа нет,
+         поэтому не рисуем «принят», а возвращаем на вход с корзиной. */
+      if (res.status === 401) {
+        window.location.href = "/login?next=/checkout";
+        return;
+      }
+      /* Приём оплаты не настроен: денег не было, и «заказ принят» тут будет
+         враньём — говорим прямо и оставляем корзину нетронутой. */
+      if (res.status === 503) {
+        setPayFailed(true);
+        setSubmitting(false);
+        return;
+      }
       if (res.ok) {
         const data = (await res.json()) as {
           url?: string;
-          demo?: boolean;
           token?: string;
           invId?: number;
         };
@@ -113,6 +125,31 @@ export default function CheckoutPage() {
     return (
       <section className="measure gutter pt-28 pb-24 md:pt-40 md:pb-36">
         <EmptyCart />
+      </section>
+    );
+  }
+
+  /* Заказ оформляется только из учётной записи: так он остаётся в кабинете,
+     а почта заказа заведомо принадлежит покупателю. Корзина не трогается. */
+  if (!done && !user) {
+    return (
+      <section className="measure gutter pt-28 pb-24 md:pt-40 md:pb-36">
+        <Reveal>
+          <div className="mx-auto flex min-h-[40vh] max-w-md flex-col items-center justify-center text-center">
+            <h1 className="display text-3xl md:text-4xl">
+              {t("checkout.auth.title")}
+            </h1>
+            <p className="mt-5 text-sm leading-relaxed text-muted">
+              {t("checkout.auth.note")}
+            </p>
+            <Link href="/login?next=/checkout" className="btn btn-primary mt-9">
+              {t("checkout.auth.cta")}
+            </Link>
+            <Link href="/cart" className="link-quiet label mt-6">
+              {t("cart.title")}
+            </Link>
+          </div>
+        </Reveal>
       </section>
     );
   }
@@ -208,6 +245,7 @@ export default function CheckoutPage() {
                             type="text"
                             name="name"
                             required
+                            defaultValue={user?.name ?? ""}
                             autoComplete="name"
                             placeholder={t("checkout.name")}
                             aria-invalid={errors.name ? true : undefined}
@@ -221,27 +259,15 @@ export default function CheckoutPage() {
                           )}
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
+                          {/* Почта не редактируется: заказ и чек уходят на
+                              адрес учётной записи */}
                           <div>
-                            <label className="sr-only" htmlFor="co-email">
-                              {t("checkout.email")}
-                            </label>
-                            <input
-                              id="co-email"
-                              className={`field ${errors.email ? "field-invalid" : ""}`}
-                              type="email"
-                              name="email"
-                              required
-                              autoComplete="email"
-                              placeholder={t("checkout.email")}
-                              aria-invalid={errors.email ? true : undefined}
-                              aria-describedby={errors.email ? "err-co-email" : undefined}
-                              onChange={() => clearError("email")}
-                            />
-                            {errors.email && (
-                              <p id="err-co-email" className="field-error">
-                                {errors.email}
-                              </p>
-                            )}
+                            <p className="field flex items-center bg-porcelain text-muted">
+                              <span className="truncate">{user?.email}</span>
+                            </p>
+                            <p className="mt-2 text-xs text-muted">
+                              {t("checkout.account.email")}
+                            </p>
                           </div>
                           <div>
                             <label className="sr-only" htmlFor="co-phone">
@@ -253,6 +279,7 @@ export default function CheckoutPage() {
                               type="tel"
                               name="phone"
                               required
+                              defaultValue={user?.phone ?? ""}
                               autoComplete="tel"
                               placeholder={t("checkout.phone")}
                               aria-invalid={errors.phone ? true : undefined}
@@ -309,6 +336,7 @@ export default function CheckoutPage() {
                             type="text"
                             name="city"
                             required
+                            defaultValue={user?.city ?? ""}
                             autoComplete="address-level2"
                             placeholder={t("checkout.city")}
                             aria-invalid={errors.city ? true : undefined}
@@ -331,6 +359,7 @@ export default function CheckoutPage() {
                             type="text"
                             name="address"
                             required
+                            defaultValue={user?.address ?? ""}
                             autoComplete="street-address"
                             placeholder={t("checkout.address")}
                             aria-invalid={errors.address ? true : undefined}
@@ -433,6 +462,24 @@ export default function CheckoutPage() {
                   >
                     {t("checkout.pay")}
                   </button>
+                  {payFailed && (
+                    <p className="field-error mt-4" role="alert">
+                      {t("checkout.unavailable")}
+                    </p>
+                  )}
+                  {/* Акцепт оферты — договор считается заключённым с оплаты,
+                      поэтому согласие стоит ровно у кнопки */}
+                  <p className="mt-4 text-xs leading-relaxed text-muted">
+                    {t("checkout.consent")}{" "}
+                    <Link href="/offer" className="link-quiet">
+                      {t("legal.offer.short")}
+                    </Link>{" "}
+                    {t("legal.and")}{" "}
+                    <Link href="/privacy" className="link-quiet">
+                      {t("legal.privacy.short")}
+                    </Link>
+                    .
+                  </p>
                 </aside>
               </Reveal>
             </div>

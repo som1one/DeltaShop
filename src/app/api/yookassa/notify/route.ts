@@ -66,6 +66,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignored: "amount mismatch" });
   }
 
-  await markPaid(invId);
+  await markPaid(invId, "yookassa");
   return NextResponse.json({ ok: true });
 }
